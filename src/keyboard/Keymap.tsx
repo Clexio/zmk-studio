@@ -48,6 +48,11 @@ export const Keymap = ({
       };
     }
 
+    const keyName =
+      keymap.layers[selectedLayerIndex].keyNames?.find(
+        (kn) => kn.keyPosition === i
+      )?.name || undefined;
+
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
       header:
@@ -61,9 +66,15 @@ export const Keymap = ({
       rx: (k.rx || 0) / 100.0,
       ry: (k.ry || 0) / 100.0,
       children: (
-        <HidUsageLabel
-          hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
-        />
+        <div className="flex flex-col items-center justify-center gap-0.5">
+          {keyName ? (
+            <span className="text-sm font-semibold leading-none">{keyName}</span>
+          ) : (
+            <HidUsageLabel
+              hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
+            />
+          )}
+        </div>
       ),
     };
   });

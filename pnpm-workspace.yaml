@@ -1,0 +1,10 @@
+allowBuilds:
+  '@swc/core': true
+  '@zmkfirmware/zmk-studio-ts-client@file:../zmk-studio-ts-client': true
+  esbuild: true
+  protobufjs: true
+onlyBuiltDependencies:
+  - esbuild
+  - "@swc/core"
+  - protobufjs
+  - "@zmkfirmware/zmk-studio-ts-client"

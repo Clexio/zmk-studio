@@ -14,6 +14,7 @@ import {
   Keymap,
   SetLayerBindingResponse,
   SetLayerPropsResponse,
+  SetLayerKeyNameResponse,
   BehaviorBinding,
   Layer,
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
@@ -158,6 +159,41 @@ function useLayouts(): [
   ];
 }
 
+function KeyNameInput({
+  name,
+  onCommit,
+}: {
+  name: string;
+  onCommit: (name: string) => void;
+}) {
+  const [value, setValue] = useState(name);
+
+  useEffect(() => {
+    setValue(name);
+  }, [name]);
+
+  return (
+    <input
+      type="text"
+      maxLength={2}
+      value={value}
+      placeholder="如：上移"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        if (value !== name) {
+          onCommit(value);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur();
+        }
+      }}
+      className="h-8 rounded px-2 w-32 bg-base-100 text-base-content"
+    />
+  );
+}
+
 export default function Keyboard() {
   const [
     layouts,
@@ -290,6 +326,104 @@ export default function Keyboard() {
       });
     },
     [conn, keymap, undoRedo, selectedLayerIndex, selectedKeyPosition]
+  );
+
+  const setKeyNameInDraft = useCallback(
+    (draft: any, layerId: number, keyPosition: number, name: string) => {
+      const li = draft.layers.findIndex((l: Layer) => l.id === layerId);
+      if (li < 0) {
+        return;
+      }
+
+      if (!draft.layers[li].keyNames) {
+        draft.layers[li].keyNames = [];
+      }
+
+      const entry = draft.layers[li].keyNames.find(
+        (k: any) => k.keyPosition === keyPosition
+      );
+      if (entry) {
+        entry.name = name;
+      } else {
+        draft.layers[li].keyNames.push({ keyPosition, name });
+      }
+    },
+    []
+  );
+
+  let doUpdateKeyName = useCallback(
+    (name: string) => {
+      if (
+        !keymap ||
+        !keymap.layers[selectedLayerIndex] ||
+        selectedKeyPosition === undefined
+      ) {
+        console.error(
+          "Can't update key name without a selected key position and loaded keymap"
+        );
+        return;
+      }
+
+      const layerId = keymap.layers[selectedLayerIndex].id;
+      const keyPosition = selectedKeyPosition;
+      const oldName =
+        keymap.layers[selectedLayerIndex].keyNames?.find(
+          (k) => k.keyPosition === keyPosition
+        )?.name ?? "";
+
+      undoRedo?.(async () => {
+        if (!conn.conn) {
+          throw new Error("Not connected");
+        }
+
+        let resp = await call_rpc(conn.conn, {
+          keymap: { setLayerKeyName: { layerId, keyPosition, name } },
+        });
+
+        if (
+          resp.keymap?.setLayerKeyName ===
+          SetLayerKeyNameResponse.SET_LAYER_KEY_NAME_RESP_OK
+        ) {
+          setKeymap(
+            produce((draft: any) => {
+              setKeyNameInDraft(draft, layerId, keyPosition, name);
+            })
+          );
+        } else {
+          console.error(
+            "Failed to set key name",
+            resp.keymap?.setLayerKeyName
+          );
+          throw new Error(
+            "Failed to set key name: " + resp.keymap?.setLayerKeyName
+          );
+        }
+
+        return async () => {
+          if (!conn.conn) {
+            return;
+          }
+
+          let resp = await call_rpc(conn.conn, {
+            keymap: {
+              setLayerKeyName: { layerId, keyPosition, name: oldName },
+            },
+          });
+
+          if (
+            resp.keymap?.setLayerKeyName ===
+            SetLayerKeyNameResponse.SET_LAYER_KEY_NAME_RESP_OK
+          ) {
+            setKeymap(
+              produce((draft: any) => {
+                setKeyNameInDraft(draft, layerId, keyPosition, oldName);
+              })
+            );
+          }
+        };
+      });
+    },
+    [conn, keymap, undoRedo, selectedLayerIndex, selectedKeyPosition, setKeyNameInDraft]
   );
 
   let selectedBinding = useMemo(() => {
@@ -559,17 +693,33 @@ export default function Keyboard() {
           </select>
         </div>
       )}
-      {keymap && selectedBinding && (
-        <div className="p-2 col-start-2 row-start-2 bg-base-200">
-          <BehaviorBindingPicker
-            binding={selectedBinding}
-            behaviors={Object.values(behaviors)}
-            layers={keymap.layers.map(({ id, name }, li) => ({
-              id,
-              name: name || li.toLocaleString(),
-            }))}
-            onBindingChanged={doUpdateBinding}
-          />
+      {keymap && (selectedBinding || selectedKeyPosition !== undefined) && (
+        <div className="p-2 col-start-2 row-start-2 bg-base-200 flex flex-col gap-2">
+          {selectedKeyPosition !== undefined &&
+            keymap.layers[selectedLayerIndex] && (
+              <label className="flex items-center gap-2 text-sm">
+                按键名
+                <KeyNameInput
+                  name={
+                    keymap.layers[selectedLayerIndex].keyNames?.find(
+                      (k) => k.keyPosition === selectedKeyPosition
+                    )?.name ?? ""
+                  }
+                  onCommit={doUpdateKeyName}
+                />
+              </label>
+            )}
+          {selectedBinding && (
+            <BehaviorBindingPicker
+              binding={selectedBinding}
+              behaviors={Object.values(behaviors)}
+              layers={keymap.layers.map(({ id, name }, li) => ({
+                id,
+                name: name || li.toLocaleString(),
+              }))}
+              onBindingChanged={doUpdateBinding}
+            />
+          )}
         </div>
       )}
     </div>

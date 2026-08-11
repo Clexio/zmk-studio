@@ -1,0 +1,43 @@
+name: Build Windows App
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+        with:
+          path: zmk-studio
+
+      - name: Checkout ts-client
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/zmk-studio-ts-client
+          path: zmk-studio-ts-client
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install ts-client deps (lib/ 需已提交到该仓库)
+        working-directory: zmk-studio-ts-client
+        run: npm install --ignore-scripts
+
+      - name: Install app deps
+        working-directory: zmk-studio
+        run: npm install
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build & bundle Windows app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: zmk-studio
