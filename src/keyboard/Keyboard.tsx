@@ -28,10 +28,6 @@ import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
-import {
-  EventValuePicker,
-  KeyEventPicker,
-} from "../behaviors/EventBindingPicker";
 import { produce } from "immer";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
@@ -202,6 +198,41 @@ function KeyNameInput({
   );
 }
 
+function BehaviorSelect({
+  value,
+  behaviors,
+  placeholder,
+  onChange,
+}: {
+  value?: number;
+  behaviors: GetBehaviorDetailsResponse[];
+  placeholder?: string;
+  onChange: (behaviorId: number) => void;
+}) {
+  const sorted = useMemo(
+    () =>
+      [...behaviors].sort((a, b) =>
+        a.displayName.localeCompare(b.displayName)
+      ),
+    [behaviors]
+  );
+
+  return (
+    <select
+      className="h-8 rounded px-2 min-w-44 bg-base-100 text-base-content"
+      value={value ?? ""}
+      onChange={(e) => onChange(parseInt(e.target.value))}
+    >
+      {value === undefined && <option value="">{placeholder || ""}</option>}
+      {sorted.map((b) => (
+        <option key={b.id} value={b.id}>
+          {b.displayName}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function Keyboard() {
   const { t } = useI18n();
   const [
@@ -248,12 +279,6 @@ export default function Keyboard() {
   const customKnobBehaviorId = useMemo(() => {
     return Object.values(behaviors).find(
       (b) => b.displayName === "自定义旋钮"
-    )?.id;
-  }, [behaviors]);
-
-  const kpBehaviorId = useMemo(() => {
-    return Object.values(behaviors).find(
-      (b) => b.displayName === "按键"
     )?.id;
   }, [behaviors]);
 
@@ -846,70 +871,92 @@ export default function Keyboard() {
             keymap.layers[selectedLayerIndex] && (
             <div className="flex flex-col gap-2 border-t pt-2 mt-1">
               <label className="text-sm font-semibold">{t("knob")}</label>
-              {customKnobBehaviorId === undefined ? (
-                <span className="text-xs opacity-70">
-                  {t("knobUpdateFirmware")}
-                </span>
-              ) : (
-                <>
-                  {selectedKeyPosition !== undefined && (
-                    <KeyEventPicker
-                      label={t("button")}
-                      binding={
-                        keymap.layers[selectedLayerIndex].bindings[
-                          selectedKeyPosition
-                        ]
-                      }
+              <p className="text-xs opacity-70">{t("knobHint")}</p>
+              {knobSensorsForSelectedKey.map((si) => {
+                const sensorBinding =
+                  keymap.layers[selectedLayerIndex].sensorBindings?.[si];
+                if (!sensorBinding) {
+                  return null;
+                }
+                const isCustom =
+                  customKnobBehaviorId !== undefined &&
+                  sensorBinding.behaviorId === customKnobBehaviorId;
+                return (
+                  <div key={si} className="flex flex-col gap-1">
+                    <label className="text-sm">{t("knobBehavior")}</label>
+                    <BehaviorSelect
+                      value={sensorBinding.behaviorId}
                       behaviors={Object.values(behaviors)}
-                      kpBehaviorId={kpBehaviorId}
-                      onBindingChange={doUpdateBinding}
+                      onChange={(behaviorId) => {
+                        const isNowCustom =
+                          customKnobBehaviorId !== undefined &&
+                          behaviorId === customKnobBehaviorId;
+                        doUpdateSensorBinding(si, {
+                          behaviorId,
+                          param1: isNowCustom
+                            ? sensorBinding.param1
+                            : 0,
+                          param2: isNowCustom
+                            ? sensorBinding.param2
+                            : 0,
+                        });
+                      }}
                     />
-                  )}
-                  {knobSensorsForSelectedKey.map((si) => {
-                    const sensorBinding =
-                      keymap.layers[selectedLayerIndex].sensorBindings?.[si];
-                    if (!sensorBinding) {
-                      return null;
-                    }
-                    const isCustom =
-                      sensorBinding.behaviorId === customKnobBehaviorId;
-                    return (
-                      <div key={si} className="flex flex-col gap-2">
-                        <EventValuePicker
-                          label={t("knobLeftEvent")}
-                          value={isCustom ? sensorBinding.param1 : 0}
+                    <div className="flex flex-col gap-1 pl-2 border-l border-base-300 ml-2">
+                      {customKnobBehaviorId === undefined ? (
+                        <span className="text-xs opacity-70">
+                          {t("knobUpdateFirmware")}
+                        </span>
+                      ) : (
+                        <>
+                        <label className="text-xs">
+                          {t("knobLeftEvent")}
+                        </label>
+                        <BehaviorSelect
+                          value={
+                            isCustom
+                              ? sensorBinding.param1 || undefined
+                              : undefined
+                          }
                           behaviors={Object.values(behaviors)}
-                          kpBehaviorId={kpBehaviorId}
-                          onValueChange={(v) =>
+                          placeholder={t("knobEventHint")}
+                          onChange={(bid) =>
                             doUpdateSensorBinding(si, {
-                              behaviorId: customKnobBehaviorId!,
-                              param1: v,
+                              behaviorId: customKnobBehaviorId,
+                              param1: bid,
                               param2: isCustom
                                 ? sensorBinding.param2
                                 : 0,
                             })
                           }
                         />
-                        <EventValuePicker
-                          label={t("knobRightEvent")}
-                          value={isCustom ? sensorBinding.param2 : 0}
+                        <label className="text-xs">
+                          {t("knobRightEvent")}
+                        </label>
+                        <BehaviorSelect
+                          value={
+                            isCustom
+                              ? sensorBinding.param2 || undefined
+                              : undefined
+                          }
                           behaviors={Object.values(behaviors)}
-                          kpBehaviorId={kpBehaviorId}
-                          onValueChange={(v) =>
+                          placeholder={t("knobEventHint")}
+                          onChange={(bid) =>
                             doUpdateSensorBinding(si, {
-                              behaviorId: customKnobBehaviorId!,
+                              behaviorId: customKnobBehaviorId,
                               param1: isCustom
                                 ? sensorBinding.param1
                                 : 0,
-                              param2: v,
+                              param2: bid,
                             })
                           }
                         />
-                      </div>
-                    );
-                  })}
-                </>
-              )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           {selectedBinding && (
