@@ -252,7 +252,7 @@ export default function Keyboard() {
 
   const kpBehaviorId = useMemo(() => {
     return Object.values(behaviors).find(
-      (b) => b.displayName === "按键"
+      (b) => b.displayName === "按键" || b.displayName === "kp"
     )?.id;
   }, [behaviors]);
 

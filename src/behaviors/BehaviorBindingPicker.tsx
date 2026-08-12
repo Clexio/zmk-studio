@@ -16,6 +16,56 @@ import {
   EventKind,
 } from "./EventBindingPicker";
 
+/* 只能分配给旋钮旋转的传感器行为，不应出现在普通按键的行为下拉里 */
+const SENSOR_BEHAVIOR_NAMES = new Set([
+  "音量",
+  "滚动",
+  "抖音滚动",
+  "亮度",
+  "翻页",
+  "相机拖动",
+  "鼠标移动",
+  "上下方向",
+  "左右方向",
+  "自定义旋钮",
+]);
+
+/* 标准行为设备名 → 中文显示名（客户端翻译，便于用户选择） */
+const BEHAVIOR_NAME_ZH: Record<string, string> = {
+  kp: "按键",
+  mkp: "鼠标键",
+  to: "层切换",
+  mo: "临时层",
+  trans: "透明",
+  macro: "宏",
+  bt: "蓝牙",
+  mt: "按键+层",
+  lt: "层+按键",
+  tt: "双击",
+  td: "连击",
+  rg2: "RGB",
+  rgb_ug: "RGB",
+  bootloader: "进入刷机模式",
+  reset: "重置",
+  soft_off: "软关机",
+  win_l: "Win+L",
+  alt_w_f: "Alt+W+F",
+  td_power: "电源/锁屏",
+  td_u_z: "上移/Z",
+  td_d_x: "下移/X",
+  td_l_c: "左移/C",
+  td_r_g: "右移/G",
+  td_camera: "快门/音量减",
+  td_p_mute: "播放/静音",
+  td_lm_mute: "左键/静音",
+  td_move_u_video: "上移/拖视频",
+  td_move_d_photo: "下移/拖照片",
+  cam_to_video: "相机切视频",
+  cam_to_photo: "相机切拍照",
+  drag_right_back: "向右拖动",
+  drag_left_back: "向左拖动",
+};
+
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
   behaviors: GetBehaviorDetailsResponse[];
@@ -69,9 +119,13 @@ export const BehaviorBindingPicker = ({
 
   const sortedBehaviors = useMemo(
     () =>
-      [...behaviors].sort((a, b) =>
-        a.displayName.localeCompare(b.displayName)
-      ),
+      behaviors
+        .filter((b) => !SENSOR_BEHAVIOR_NAMES.has(b.displayName))
+        .map((b) => ({
+          ...b,
+          displayName: BEHAVIOR_NAME_ZH[b.displayName] ?? b.displayName,
+        }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName)),
     [behaviors]
   );
 
