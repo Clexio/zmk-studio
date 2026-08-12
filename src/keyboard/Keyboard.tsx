@@ -912,7 +912,7 @@ export default function Keyboard() {
               )}
             </div>
           )}
-          {selectedBinding && knobSensorsForSelectedKey.length === 0 && (
+          {selectedBinding && (
             <BehaviorBindingPicker
               binding={selectedBinding}
               behaviors={Object.values(behaviors)}
