@@ -10,6 +10,7 @@ import {
 } from "react-aria-components";
 import { useModalRef } from "../misc/useModalRef";
 import { GenericModal } from "../GenericModal";
+import { useI18n } from "../i18n";
 
 interface Layer {
   id: number;
@@ -34,6 +35,7 @@ interface LayerPickerProps {
     oldName: string,
     newName: string
   ) => void | Promise<void>;
+  maxLayerNameLength?: number;
 }
 
 interface EditLabelData {
@@ -46,10 +48,12 @@ const EditLabelModal = ({
   onClose,
   editLabelData,
   handleSaveNewLabel,
+  maxLayerNameLength,
 }: {
   open: boolean;
   onClose: () => void;
   editLabelData: EditLabelData;
+  maxLayerNameLength?: number;
   handleSaveNewLabel: (
     id: number,
     oldName: string,
@@ -58,6 +62,7 @@ const EditLabelModal = ({
 }) => {
   const ref = useModalRef(open);
   const [newLabelName, setNewLabelName] = useState(editLabelData.name);
+  const { t } = useI18n();
 
   const handleSave = () => {
     handleSaveNewLabel(editLabelData.id, editLabelData.name, newLabelName);
@@ -70,10 +75,11 @@ const EditLabelModal = ({
       onClose={onClose}
       className="min-w-min w-[30vw] flex flex-col"
     >
-      <span className="mb-3 text-lg">New Layer Name</span>
+      <span className="mb-3 text-lg">{t("newLayerName")}</span>
       <input
         className="p-1 border rounded border-base-content border-solid"
         type="text"
+        maxLength={maxLayerNameLength || 30}
         defaultValue={editLabelData.name}
         autoFocus
         onChange={(e) => setNewLabelName(e.target.value)}
@@ -86,7 +92,7 @@ const EditLabelModal = ({
       />
       <div className="mt-4 flex justify-end">
         <button className="py-1.5 px-2" type="button" onClick={onClose}>
-          Cancel
+          {t("cancel")}
         </button>
         <button
           className="py-1.5 px-2 ml-4 rounded-md bg-gray-100 text-black hover:bg-gray-300"
@@ -95,7 +101,7 @@ const EditLabelModal = ({
             handleSave();
           }}
         >
-          Save
+          {t("save")}
         </button>
       </div>
     </GenericModal>
@@ -112,11 +118,13 @@ export const LayerPicker = ({
   onAddClicked,
   onRemoveClicked,
   onLayerNameChanged,
+  maxLayerNameLength,
   ...props
 }: LayerPickerProps) => {
   const [editLabelData, setEditLabelData] = useState<EditLabelData | null>(
     null
   );
+  const { t } = useI18n();
 
   const layer_items = useMemo(() => {
     return layers.map((l, i) => ({
@@ -168,7 +176,7 @@ export const LayerPicker = ({
   return (
     <div className="flex flex-col min-w-40">
       <div className="grid grid-cols-[1fr_auto_auto] items-center">
-        <Label className="after:content-[':'] text-sm">Layers</Label>
+        <Label className="after:content-[':'] text-sm">{t("layers")}</Label>
         {onRemoveClicked && (
           <button
             type="button"
@@ -195,11 +203,12 @@ export const LayerPicker = ({
           open={editLabelData !== null}
           onClose={() => setEditLabelData(null)}
           editLabelData={editLabelData}
+          maxLayerNameLength={maxLayerNameLength}
           handleSaveNewLabel={handleSaveNewLabel}
         />
       )}
       <ListBox
-        aria-label="Keymap Layer"
+        aria-label={t("keymapLayerAria")}
         selectionMode="single"
         items={layer_items}
         disallowEmptySelection={true}

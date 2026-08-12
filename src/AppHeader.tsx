@@ -15,6 +15,7 @@ import { ConnectionContext } from "./rpc/ConnectionContext";
 import { ChevronDown, Undo2, Redo2, Save, Trash2 } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
+import { LanguagePicker, useI18n } from "./i18n";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -40,6 +41,7 @@ export const AppHeader = ({
   onResetSettings,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
+  const { t } = useI18n();
 
   const lockState = useContext(LockStateContext);
   const connectionState = useContext(ConnectionContext);
@@ -68,22 +70,22 @@ export const AppHeader = ({
     <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
       <div className="flex px-3 items-center gap-1">
         <img src="/zmk.svg" alt="ZMK Logo" className="h-8 rounded" />
-        <p>Studio</p>
+        <p>{t("appName")}</p>
+      </div>
+      <div className="flex items-center">
+        <LanguagePicker />
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
-        <h2 className="my-2 text-lg">Restore Stock Settings</h2>
+        <h2 className="my-2 text-lg">{t("restoreStockSettingsTitle")}</h2>
         <div>
-          <p>
-            Settings reset will remove any customizations previously made in ZMK
-            Studio and restore the stock keymap
-          </p>
-          <p>Continue?</p>
+          <p>{t("restoreStockSettingsDesc")}</p>
+          <p>{t("continueQuestion")}</p>
           <div className="flex justify-end my-2 gap-3">
             <Button
               className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
               onPress={() => setShowSettingsReset(false)}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
@@ -92,7 +94,7 @@ export const AppHeader = ({
                 onResetSettings?.();
               }}
             >
-              Restore Stock Settings
+              {t("restoreStockSettings")}
             </Button>
           </div>
         </div>
@@ -111,57 +113,57 @@ export const AppHeader = ({
               className="px-2 py-1 hover:bg-base-200"
               onAction={onDisconnect}
             >
-              Disconnect
+              {t("disconnect")}
             </MenuItem>
             <MenuItem
               className="px-2 py-1 hover:bg-base-200"
               onAction={() => setShowSettingsReset(true)}
             >
-              Restore Stock Settings
+              {t("restoreStockSettings")}
             </MenuItem>
           </Menu>
         </Popover>
       </MenuTrigger>
       <div className="flex justify-end gap-1 px-2">
         {onUndo && (
-          <Tooltip label="Undo">
+          <Tooltip label={t("undo")}>
             <Button
               className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
               isDisabled={!canUndo}
               onPress={onUndo}
             >
-              <Undo2 className="inline-block w-4 mx-1" aria-label="Undo" />
+              <Undo2 className="inline-block w-4 mx-1" aria-label={t("undo")} />
             </Button>
           </Tooltip>
         )}
 
         {onRedo && (
-          <Tooltip label="Redo">
+          <Tooltip label={t("redo")}>
             <Button
               className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
               isDisabled={!canRedo}
               onPress={onRedo}
             >
-              <Redo2 className="inline-block w-4 mx-1" aria-label="Redo" />
+              <Redo2 className="inline-block w-4 mx-1" aria-label={t("redo")} />
             </Button>
           </Tooltip>
         )}
-        <Tooltip label="Save">
+        <Tooltip label={t("save")}>
           <Button
             className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             isDisabled={!unsaved}
             onPress={onSave}
           >
-            <Save className="inline-block w-4 mx-1" aria-label="Save" />
+            <Save className="inline-block w-4 mx-1" aria-label={t("save")} />
           </Button>
         </Tooltip>
-        <Tooltip label="Discard">
+        <Tooltip label={t("discard")}>
           <Button
             className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             onPress={onDiscard}
             isDisabled={!unsaved}
           >
-            <Trash2 className="inline-block w-4 mx-1" aria-label="Discard" />
+            <Trash2 className="inline-block w-4 mx-1" aria-label={t("discard")} />
           </Button>
         </Tooltip>
       </div>

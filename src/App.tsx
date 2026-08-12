@@ -142,7 +142,12 @@ async function connect(
 
   if (!details) {
     // TODO: Show a proper toast/alert not using `window.alert`
-    window.alert("Failed to connect to the chosen device");
+    window.alert(
+      // 语言选择位于页面顶部，连接失败提示跟随当前语言
+      document.documentElement.lang === "zh"
+        ? "无法连接到所选设备"
+        : "Failed to connect to the chosen device"
+    );
     return;
   }
 

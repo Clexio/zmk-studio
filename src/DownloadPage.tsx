@@ -9,6 +9,7 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { DownloadIcon } from "lucide-react";
 import releaseData from "./data/release-data.json";
+import { useI18n } from "./i18n";
 
 type Platform = "windows" | "mac" | "linux" | "ios" | "android" | "unknown";
 
@@ -102,6 +103,7 @@ function getUrlFromPattern(assets: string[], pattern: RegExp) {
 }
 
 export const Download = () => {
+  const { t } = useI18n();
   const [platform, setPlatform] = useState<Platform>("unknown");
   const [showAll, setShowAll] = useState(false);
 
@@ -131,7 +133,7 @@ export const Download = () => {
                   className="p-3 text-lg bg-primary hover:opacity-85 active:opacity-70 text-primary-content rounded-lg justify-center items-center gap-3 flex"
                 >
                   <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6"/>{" "}
-                  Download for {link.name}
+                  {t("downloadFor")} {link.name}
                 </a>
               ))}
             </div>
@@ -143,7 +145,7 @@ export const Download = () => {
               onClick={() => setShowAll(!showAll)}
               className="text-primary text-left hover:underline"
             >
-              {showAll ? "Hide" : "Show"} all downloads
+              {showAll ? t("hideAllDownloads") : t("showAllDownloads")}
             </button>
           )}
           {showAll && (
@@ -170,7 +172,7 @@ export const Download = () => {
         className="text-md hover:underline"
         href="https://github.com/zmkfirmware/zmk-studio/releases"
       >
-        See GitHub Releases →
+        {t("seeGithubReleases")}
       </a>
     </div>
   );

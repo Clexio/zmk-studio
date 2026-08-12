@@ -9,6 +9,7 @@ import {
   PhysicalLayout as PhysicalLayoutComp,
 } from "./PhysicalLayout";
 import { HidUsageLabel } from "./HidUsageLabel";
+import { useI18n } from "../i18n";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -31,6 +32,7 @@ export const Keymap = ({
   selectedKeyPosition,
   onKeyPositionClicked,
 }: KeymapProps) => {
+  const { t } = useI18n();
   if (!keymap.layers[selectedLayerIndex]) {
     return <></>;
   }
@@ -39,7 +41,7 @@ export const Keymap = ({
     if (i >= keymap.layers[selectedLayerIndex].bindings.length) {
       return {
         id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
-        header: "Unknown",
+        header: t("unknown"),
         x: k.x / 100.0,
         y: k.y / 100.0,
         width: k.width / 100,
@@ -57,7 +59,7 @@ export const Keymap = ({
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
       header:
         behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
-          ?.displayName || "Unknown",
+          ?.displayName || t("unknown"),
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,

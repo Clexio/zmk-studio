@@ -15,6 +15,7 @@ import {
   SetLayerBindingResponse,
   SetLayerPropsResponse,
   SetLayerKeyNameResponse,
+  SetLayerSensorBindingResponse,
   BehaviorBinding,
   Layer,
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
@@ -32,6 +33,7 @@ import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
+import { useI18n } from "../i18n";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -162,9 +164,11 @@ function useLayouts(): [
 function KeyNameInput({
   name,
   onCommit,
+  placeholder,
 }: {
   name: string;
   onCommit: (name: string) => void;
+  placeholder: string;
 }) {
   const [value, setValue] = useState(name);
 
@@ -177,7 +181,7 @@ function KeyNameInput({
       type="text"
       maxLength={2}
       value={value}
-      placeholder="如：上移"
+      placeholder={placeholder}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => {
         if (value !== name) {
@@ -195,6 +199,7 @@ function KeyNameInput({
 }
 
 export default function Keyboard() {
+  const { t } = useI18n();
   const [
     layouts,
     _setLayouts,
@@ -326,6 +331,87 @@ export default function Keyboard() {
       });
     },
     [conn, keymap, undoRedo, selectedLayerIndex, selectedKeyPosition]
+  );
+
+  let doUpdateSensorBinding = useCallback(
+    (sensorIndex: number, binding: BehaviorBinding) => {
+      if (!keymap || !keymap.layers[selectedLayerIndex]) {
+        console.error(
+          "Can't update sensor binding without a loaded keymap"
+        );
+        return;
+      }
+
+      const layer = selectedLayerIndex;
+      const layerId = keymap.layers[layer].id;
+      const oldBinding = keymap.layers[layer].sensorBindings?.[sensorIndex];
+      if (!oldBinding) {
+        return;
+      }
+
+      undoRedo?.(async () => {
+        if (!conn.conn) {
+          throw new Error("Not connected");
+        }
+
+        let resp = await call_rpc(conn.conn, {
+          keymap: {
+            setLayerSensorBinding: {
+              layerId,
+              sensorPosition: sensorIndex,
+              binding,
+            },
+          },
+        });
+
+        if (
+          resp.keymap?.setLayerSensorBinding ===
+          SetLayerSensorBindingResponse.SET_LAYER_SENSOR_BINDING_RESP_OK
+        ) {
+          setKeymap(
+            produce((draft: any) => {
+              if (!draft.layers[layer].sensorBindings) {
+                draft.layers[layer].sensorBindings = [];
+              }
+              draft.layers[layer].sensorBindings[sensorIndex] = binding;
+            })
+          );
+        } else {
+          console.error(
+            "Failed to set sensor binding",
+            resp.keymap?.setLayerSensorBinding
+          );
+          throw new Error("Failed to set sensor binding");
+        }
+
+        return async () => {
+          if (!conn.conn) {
+            return;
+          }
+
+          let resp = await call_rpc(conn.conn, {
+            keymap: {
+              setLayerSensorBinding: {
+                layerId,
+                sensorPosition: sensorIndex,
+                binding: oldBinding,
+              },
+            },
+          });
+          if (
+            resp.keymap?.setLayerSensorBinding ===
+            SetLayerSensorBindingResponse.SET_LAYER_SENSOR_BINDING_RESP_OK
+          ) {
+            setKeymap(
+              produce((draft: any) => {
+                draft.layers[layer].sensorBindings[sensorIndex] = oldBinding;
+              })
+            );
+          }
+        };
+      });
+    },
+    [conn, keymap, undoRedo, selectedLayerIndex]
   );
 
   const setKeyNameInDraft = useCallback(
@@ -659,6 +745,7 @@ export default function Keyboard() {
               onAddClicked={addLayer}
               onRemoveClicked={removeLayer}
               onLayerNameChanged={changeLayerName}
+              maxLayerNameLength={keymap.maxLayerNameLength}
             />
           </div>
         )}
@@ -682,7 +769,7 @@ export default function Keyboard() {
               setKeymapScale(value);
             }}
           >
-            <option value="auto">Auto</option>
+            <option value="auto">{t("zoomAuto")}</option>
             <option value={0.25}>25%</option>
             <option value={0.5}>50%</option>
             <option value={0.75}>75%</option>
@@ -698,17 +785,51 @@ export default function Keyboard() {
           {selectedKeyPosition !== undefined &&
             keymap.layers[selectedLayerIndex] && (
               <label className="flex items-center gap-2 text-sm">
-                按键名
+                {t("keyName")}
                 <KeyNameInput
                   name={
                     keymap.layers[selectedLayerIndex].keyNames?.find(
                       (k) => k.keyPosition === selectedKeyPosition
                     )?.name ?? ""
                   }
+                  placeholder={t("keyNamePlaceholder")}
                   onCommit={doUpdateKeyName}
                 />
               </label>
             )}
+          {keymap.sensorCount > 0 && keymap.layers[selectedLayerIndex] && (
+            <div className="flex flex-col gap-2 border-t pt-2 mt-1">
+              <label className="text-sm font-semibold">{t("knob")}</label>
+              <p className="text-xs opacity-70">{t("knobHint")}</p>
+              {Array.from({ length: keymap.sensorCount }).map((_, si) => {
+                const sensorBinding =
+                  keymap.layers[selectedLayerIndex].sensorBindings?.[si];
+                if (!sensorBinding) {
+                  return null;
+                }
+                return (
+                  <div key={si} className="flex flex-col gap-1">
+                    <label className="text-sm">
+                      {keymap.sensorCount > 1
+                        ? `${t("knob")} #${si + 1}`
+                        : t("knob")}
+                    </label>
+                    <BehaviorBindingPicker
+                      binding={sensorBinding}
+                      behaviors={Object.values(behaviors)}
+                      layers={keymap.layers.map(({ id, name }, li) => ({
+                        id,
+                        name: name || li.toLocaleString(),
+                      }))}
+                      onBindingChanged={(binding) =>
+                        doUpdateSensorBinding(si, binding)
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {selectedBinding && (
             <BehaviorBindingPicker
               binding={selectedBinding}

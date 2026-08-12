@@ -42,6 +42,7 @@ import splitkb from "./assets/splitkb.png";
 import splitkbDarkMode from "./assets/splitkb-dark-mode.png";
 import { GenericModal } from "./GenericModal";
 import { ExternalLink } from "./misc/ExternalLink";
+import { useI18n } from "./i18n";
 
 export interface AboutModalProps {
   open: boolean;
@@ -177,34 +178,31 @@ const sponsors = [
 
 export const AboutModal = ({ open, onClose }: AboutModalProps) => {
   const ref = useModalRef(open, true);
+  const { t } = useI18n();
 
   return (
     <GenericModal ref={ref} className="min-w-min w-[70vw]" onClose={onClose}>
       <div className="flex justify-between items-start">
         <p>
-          The ZMK Project:{" "}
-          <ExternalLink href="https://zmk.dev/">website</ExternalLink>,{" "}
+          {t("zmkProject")}{" "}
+          <ExternalLink href="https://zmk.dev/">{t("website")}</ExternalLink>,{" "}
           <ExternalLink href="https://github.com/zmkfirmware/zmk/issues/">
-            GitHub Issues
+            {t("githubIssues")}
           </ExternalLink>
           ,{" "}
           <ExternalLink href="https://zmk.dev/community/discord/invite">
-            Discord Server
+            {t("discordServer")}
           </ExternalLink>
         </p>
         <button
           className="p-1.5 rounded-md bg-gray-100 text-black hover:bg-gray-300"
           onClick={onClose}
         >
-          Close
+          {t("close")}
         </button>
       </div>
       <div>
-        <p className="py-1 mr-2">
-          ZMK Studio is made possible thanks to the generous donation of time
-          from our contributors, as well as the financial sponsorship from the
-          following vendors:
-        </p>
+        <p className="py-1 mr-2">{t("aboutText")}</p>
       </div>
       <div className="grid gap-2 auto-rows-auto grid-cols-[auto_minmax(min-content,1fr)] justify-items-center items-center">
         {sponsors.map((s) => {

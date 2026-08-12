@@ -8,6 +8,8 @@ import { Key, ListBox, ListBoxItem, Selection } from "react-aria-components";
 import { useModalRef } from "./misc/useModalRef";
 import { ExternalLink } from "./misc/ExternalLink";
 import { GenericModal } from "./GenericModal";
+import { useI18n } from "./i18n";
+import type { I18nTranslate } from "./i18n";
 
 export type TransportFactory = {
   label: string;
@@ -28,7 +30,8 @@ export interface ConnectModalProps {
 function deviceList(
   open: boolean,
   transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport) => void
+  onTransportCreated: (t: RpcTransport) => void,
+  t: I18nTranslate
 ) {
   const [devices, setDevices] = useState<
     Array<[TransportFactory, AvailableDevice]>
@@ -89,7 +92,7 @@ function deviceList(
   return (
     <div>
       <div className="grid grid-cols-[1fr_auto]">
-        <label>Select A Device:</label>
+        <label>{t("selectDevice")}</label>
         <button
           className="p-1 rounded hover:bg-base-300 disabled:bg-base-100 disabled:opacity-75"
           disabled={refreshing}
@@ -103,7 +106,7 @@ function deviceList(
         </button>
       </div>
       <ListBox
-        aria-label="Device"
+        aria-label={t("device")}
         items={devices}
         onSelectionChange={onSelect}
         selectionMode="single"
@@ -129,7 +132,8 @@ function deviceList(
 
 function simpleDevicePicker(
   transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport) => void
+  onTransportCreated: (t: RpcTransport) => void,
+  t: I18nTranslate
 ) {
   const [availableDevices, setAvailableDevices] = useState<
     AvailableDevice[] | undefined
@@ -199,7 +203,7 @@ function simpleDevicePicker(
   ));
   return (
     <div>
-      <p className="text-sm">Select a connection type.</p>
+      <p className="text-sm">{t("selectConnectionType")}</p>
       <ul className="flex gap-2 pt-2">{connections}</ul>
       {selectedTransport && availableDevices && (
         <ul>
@@ -223,34 +227,31 @@ function simpleDevicePicker(
   );
 }
 
-function noTransportsOptionsPrompt() {
+function noTransportsOptionsPrompt(t: I18nTranslate) {
   return (
     <div className="m-4 flex flex-col gap-2">
       <p>
-        Your browser is not supported. ZMK Studio uses either{" "}
+        {t("browserNotSupportedPart1")}{" "}
         <ExternalLink href="https://caniuse.com/web-serial">
           Web Serial
         </ExternalLink>{" "}
-        or{" "}
+        {t("browserNotSupportedPart2")}{" "}
         <ExternalLink href="https://caniuse.com/web-bluetooth">
           Web Bluetooth
         </ExternalLink>{" "}
-        (Linux only) to connect to ZMK devices.
+        {t("browserNotSupportedPart3")}
       </p>
 
       <div>
-        <p>To use ZMK Studio, either:</p>
+        <p>{t("toUseStudio")}</p>
         <ul className="list-disc list-inside">
           <li>
-            Use a browser that supports the above web technologies, e.g.
-            Chrome/Edge, or
+            {t("useSupportedBrowser")}
           </li>
           <li>
-            Download our{" "}
             <ExternalLink href="/download">
-              cross platform application
+              {t("downloadApp")}
             </ExternalLink>
-            .
           </li>
         </ul>
       </div>
@@ -261,6 +262,7 @@ function noTransportsOptionsPrompt() {
 function connectOptions(
   transports: TransportFactory[],
   onTransportCreated: (t: RpcTransport) => void,
+  t: I18nTranslate,
   open?: boolean
 ) {
   const useSimplePicker = useMemo(
@@ -269,8 +271,8 @@ function connectOptions(
   );
 
   return useSimplePicker
-    ? simpleDevicePicker(transports, onTransportCreated)
-    : deviceList(open || false, transports, onTransportCreated);
+    ? simpleDevicePicker(transports, onTransportCreated, t)
+    : deviceList(open || false, transports, onTransportCreated, t);
 }
 
 export const ConnectModal = ({
@@ -279,15 +281,16 @@ export const ConnectModal = ({
   onTransportCreated,
 }: ConnectModalProps) => {
   const dialog = useModalRef(open || false, false, false);
+  const { t } = useI18n();
 
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
 
   return (
     <GenericModal ref={dialog} className="max-w-xl">
-      <h1 className="text-xl">Welcome to ZMK Studio</h1>
+      <h1 className="text-xl">{t("welcome")}</h1>
       {haveTransports
-        ? connectOptions(transports, onTransportCreated, open)
-        : noTransportsOptionsPrompt()}
+        ? connectOptions(transports, onTransportCreated, t, open)
+        : noTransportsOptionsPrompt(t)}
     </GenericModal>
   );
 };
