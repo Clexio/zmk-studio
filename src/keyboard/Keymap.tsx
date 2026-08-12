@@ -20,6 +20,7 @@ export interface KeymapProps {
   scale: LayoutZoom;
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
+  knobPositions?: number[];
   onKeyPositionClicked: (keyPosition: number) => void;
 }
 
@@ -30,6 +31,7 @@ export const Keymap = ({
   scale,
   selectedLayerIndex,
   selectedKeyPosition,
+  knobPositions,
   onKeyPositionClicked,
 }: KeymapProps) => {
   const { t } = useI18n();
@@ -54,6 +56,7 @@ export const Keymap = ({
       keymap.layers[selectedLayerIndex].keyNames?.find(
         (kn) => kn.keyPosition === i
       )?.name || undefined;
+    const isKnob = knobPositions?.includes(i) || false;
 
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
@@ -75,6 +78,11 @@ export const Keymap = ({
             <HidUsageLabel
               hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
             />
+          )}
+          {isKnob && (
+            <span className="text-[10px] leading-none px-1 rounded bg-primary/20 text-primary">
+              {t("knobBadge")}
+            </span>
           )}
         </div>
       ),

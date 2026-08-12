@@ -16,6 +16,7 @@ import { ChevronDown, Undo2, Redo2, Save, Trash2 } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { LanguagePicker, useI18n } from "./i18n";
+import { useTheme } from "./misc/useTheme";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -42,6 +43,7 @@ export const AppHeader = ({
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
   const { t } = useI18n();
+  const theme = useTheme();
 
   const lockState = useContext(LockStateContext);
   const connectionState = useContext(ConnectionContext);
@@ -69,8 +71,16 @@ export const AppHeader = ({
   return (
     <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
       <div className="flex px-3 items-center gap-1">
-        <img src="/zmk.svg" alt="ZMK Logo" className="h-8 rounded" />
-        <p>{t("appName")}</p>
+        <img src="/logo.png" alt="KeyPlayer Logo" className="h-7 rounded" />
+        <img
+          src={
+            theme === "dark"
+              ? "/keyplayer-text-white.png"
+              : "/keyplayer-text-black.png"
+          }
+          alt="KeyPlayer"
+          className="h-4"
+        />
       </div>
       <div className="flex items-center">
         <LanguagePicker />
