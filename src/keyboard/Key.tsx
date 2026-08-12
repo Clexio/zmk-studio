@@ -1,4 +1,4 @@
-import { PropsWithChildren } from "react";
+import React, { PropsWithChildren } from "react";
 import BehaviorShortNames from "./behavior-short-names.json";
 
 interface KeyProps {
@@ -6,7 +6,8 @@ interface KeyProps {
   width: number;
   height: number;
   oneU: number;
-  header?: string;
+  knob?: boolean;
+  header?: React.ReactNode;
   onClick?: () => void;
 }
 
@@ -40,6 +41,7 @@ export const Key = ({
   height,
   oneU,
   header,
+  knob = false,
   onClick,
   children,
 }: PropsWithChildren<KeyProps>) => {
@@ -48,7 +50,7 @@ export const Key = ({
 
   return (
     <button
-      className={`group rounded relative flex justify-center items-center cursor-pointer transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-125 ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
+      className={`group relative flex justify-center items-center cursor-pointer transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-125 ${knob ? "rounded-full ring-2 ring-primary/40" : "rounded"} ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
         }`}
       style={{
         width: `${pixelWidth}px`,
@@ -56,7 +58,9 @@ export const Key = ({
       }}
       onClick={onClick}
     >
-      <div className={`absolute text-xs ${selected ? "text-primary-content" : "z1text-base-content"} opacity-80 top-1 text-nowrap left-1/2 font-light -translate-x-1/2 text-center`}>{shortenHeader(header)}</div>
+      <div className={`absolute ${selected ? "text-primary-content" : "z1text-base-content"} opacity-80 top-0.5 text-nowrap left-1/2 font-light -translate-x-1/2 text-center text-[10px]`}>
+        {typeof header === "string" ? shortenHeader(header) : header}
+      </div>
       {children}
     </button>
   );

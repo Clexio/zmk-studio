@@ -788,6 +788,7 @@ export default function Keyboard() {
             layout={layouts[selectedPhysicalLayoutIndex]}
             behaviors={behaviors}
             knobPositions={knobPositions}
+            kpBehaviorId={kpBehaviorId}
             scale={keymapScale}
             selectedLayerIndex={selectedLayerIndex}
             selectedKeyPosition={selectedKeyPosition}

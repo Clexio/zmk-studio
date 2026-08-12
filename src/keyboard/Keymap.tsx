@@ -21,6 +21,7 @@ export interface KeymapProps {
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
   knobPositions?: number[];
+  kpBehaviorId?: number;
   onKeyPositionClicked: (keyPosition: number) => void;
 }
 
@@ -32,6 +33,7 @@ export const Keymap = ({
   selectedLayerIndex,
   selectedKeyPosition,
   knobPositions,
+  kpBehaviorId,
   onKeyPositionClicked,
 }: KeymapProps) => {
   const { t } = useI18n();
@@ -57,12 +59,18 @@ export const Keymap = ({
         (kn) => kn.keyPosition === i
       )?.name || undefined;
     const isKnob = knobPositions?.includes(i) || false;
+    const binding = keymap.layers[selectedLayerIndex].bindings[i];
+    const isKp = kpBehaviorId !== undefined && binding.behaviorId === kpBehaviorId;
+    let header: React.ReactNode =
+      behaviors[binding.behaviorId]?.displayName || t("unknown");
+    if (isKp) {
+      header = <HidUsageLabel hid_usage={binding.param1} />;
+    }
 
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
-      header:
-        behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
-          ?.displayName || t("unknown"),
+      header,
+      knob: isKnob,
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,
@@ -71,19 +79,12 @@ export const Keymap = ({
       rx: (k.rx || 0) / 100.0,
       ry: (k.ry || 0) / 100.0,
       children: (
-        <div className="flex flex-col items-center justify-center gap-0.5">
+        <div className="flex items-center justify-center">
           {keyName ? (
-            <span className="text-sm font-semibold leading-none">{keyName}</span>
-          ) : (
-            <HidUsageLabel
-              hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
-            />
-          )}
-          {isKnob && (
-            <span className="text-[10px] leading-none px-1 rounded bg-primary/20 text-primary">
-              {t("knobBadge")}
+            <span className="text-xs font-semibold leading-none text-center">
+              {keyName}
             </span>
-          )}
+          ) : null}
         </div>
       ),
     };
