@@ -28,7 +28,7 @@ interface Decoded {
   mods: number;
 }
 
-function decodeKeycode(keycode: number): Decoded {
+export function decodeKeycode(keycode: number): Decoded {
   const mods = (keycode >>> 24) & 0xff;
   const page = (keycode >>> 16) & 0xff;
   const keyId = keycode & 0xffff;
@@ -41,7 +41,7 @@ function decodeKeycode(keycode: number): Decoded {
   return { page, keyId, mods };
 }
 
-function encodeKeycode(
+export function encodeKeycode(
   kind: EventKind,
   keyId: number,
   mods: number
@@ -106,7 +106,7 @@ function KeyDropdown({
   );
 }
 
-function ModifierArea({
+export function ModifierArea({
   mods,
   onModsChange,
 }: {
@@ -131,6 +131,44 @@ function ModifierArea({
         </label>
       ))}
     </div>
+  );
+}
+
+export function GroupedKeyDropdown({
+  kind,
+  keyId,
+  onChange,
+}: {
+  kind: EventKind;
+  keyId: number;
+  onChange: (kind: EventKind, keyId: number) => void;
+}) {
+  const { keys, consumer } = useKeyOptions();
+
+  return (
+    <select
+      className="h-8 rounded px-2 min-w-36 bg-base-100 text-base-content"
+      value={`${kind}-${keyId}`}
+      onChange={(e) => {
+        const [k, id] = e.target.value.split("-");
+        onChange(k as EventKind, parseInt(id));
+      }}
+    >
+      <optgroup label="Keyboard">
+        {keys.map((k) => (
+          <option key={`${k.page}-${k.id}`} value={`${k.page === 7 ? "key" : "consumer"}-${k.id}`}>
+            {k.name}
+          </option>
+        ))}
+      </optgroup>
+      <optgroup label="Consumer">
+        {consumer.map((k) => (
+          <option key={`${k.page}-${k.id}`} value={`consumer-${k.id}`}>
+            {k.name}
+          </option>
+        ))}
+      </optgroup>
+    </select>
   );
 }
 

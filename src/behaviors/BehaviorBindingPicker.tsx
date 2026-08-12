@@ -8,11 +8,20 @@ import { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { BehaviorParametersPicker } from "./BehaviorParametersPicker";
 import { validateValue } from "./parameters";
 import { useI18n } from "../i18n";
+import {
+  GroupedKeyDropdown,
+  ModifierArea,
+  decodeKeycode,
+  encodeKeycode,
+  EventKind,
+} from "./EventBindingPicker";
 
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; name: string }[];
+  kpBehaviorId?: number;
+  hideLabel?: boolean;
   onBindingChanged: (binding: BehaviorBinding) => void;
 }
 
@@ -44,6 +53,8 @@ export const BehaviorBindingPicker = ({
   binding,
   layers,
   behaviors,
+  kpBehaviorId,
+  hideLabel,
   onBindingChanged,
 }: BehaviorBindingPickerProps) => {
   const { t } = useI18n();
@@ -57,9 +68,18 @@ export const BehaviorBindingPicker = ({
   );
 
   const sortedBehaviors = useMemo(
-    () => behaviors.sort((a, b) => a.displayName.localeCompare(b.displayName)),
+    () =>
+      [...behaviors].sort((a, b) =>
+        a.displayName.localeCompare(b.displayName)
+      ),
     [behaviors]
   );
+
+  const isKp = kpBehaviorId !== undefined && behaviorId === kpBehaviorId;
+  const decoded = decodeKeycode(param1 || 0);
+  const kind: EventKind = decoded.kind ?? "key";
+  const keyId = decoded.keyId || 0x04;
+  const mods = kind === "key" ? decoded.mods : 0;
 
   useEffect(() => {
     if (
@@ -102,14 +122,19 @@ export const BehaviorBindingPicker = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div>
-        <label>{t("behavior")}</label>
+      <div className="flex flex-wrap items-center gap-2">
+        {!hideLabel && <label>{t("behavior")}</label>}
         <select
           value={behaviorId}
-          className="h-8 rounded"
+          className="h-8 rounded px-2 min-w-36 bg-base-100 text-base-content"
           onChange={(e) => {
-            setBehaviorId(parseInt(e.target.value));
-            setParam1(0);
+            const id = parseInt(e.target.value);
+            setBehaviorId(id);
+            setParam1(
+              kpBehaviorId !== undefined && id === kpBehaviorId
+                ? encodeKeycode("key", 0x04, 0)
+                : 0
+            );
             setParam2(0);
           }}
         >
@@ -119,8 +144,25 @@ export const BehaviorBindingPicker = ({
             </option>
           ))}
         </select>
+        {isKp && (
+          <>
+            <GroupedKeyDropdown
+              kind={kind}
+              keyId={keyId}
+              onChange={(k, id) => setParam1(encodeKeycode(k, id, mods))}
+            />
+            {kind === "key" && (
+              <ModifierArea
+                mods={mods}
+                onModsChange={(m) =>
+                  setParam1(encodeKeycode("key", keyId, m))
+                }
+              />
+            )}
+          </>
+        )}
       </div>
-      {metadata && (
+      {!isKp && metadata && (
         <BehaviorParametersPicker
           metadata={metadata}
           param1={param1}

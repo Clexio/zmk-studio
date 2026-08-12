@@ -30,7 +30,6 @@ import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import {
   EventValuePicker,
-  KeyEventPicker,
 } from "../behaviors/EventBindingPicker";
 import { produce } from "immer";
 import { LockStateContext } from "../rpc/LockStateContext";
@@ -853,16 +852,24 @@ export default function Keyboard() {
               ) : (
                 <>
                   {selectedKeyPosition !== undefined && (
-                    <KeyEventPicker
-                      label={t("button")}
-                      binding={
-                        keymap.layers[selectedLayerIndex].bindings[
-                          selectedKeyPosition
-                        ]
-                      }
-                      kpBehaviorId={kpBehaviorId}
-                      onBindingChange={doUpdateBinding}
-                    />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs">{t("button")}</label>
+                      <BehaviorBindingPicker
+                        binding={
+                          keymap.layers[selectedLayerIndex].bindings[
+                            selectedKeyPosition
+                          ]
+                        }
+                        behaviors={Object.values(behaviors)}
+                        layers={keymap.layers.map(({ id, name }, li) => ({
+                          id,
+                          name: name || li.toLocaleString(),
+                        }))}
+                        kpBehaviorId={kpBehaviorId}
+                        hideLabel
+                        onBindingChanged={doUpdateBinding}
+                      />
+                    </div>
                   )}
                   {knobSensorsForSelectedKey.map((si) => {
                     const sensorBinding =
@@ -915,6 +922,7 @@ export default function Keyboard() {
                 id,
                 name: name || li.toLocaleString(),
               }))}
+              kpBehaviorId={kpBehaviorId}
               onBindingChanged={doUpdateBinding}
             />
           )}
