@@ -1,0 +1,52 @@
+name: Build macOS App
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+        with:
+          path: zmk-studio
+
+      - name: Checkout ts-client
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/zmk-studio-ts-client
+          path: zmk-studio-ts-client
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install ts-client deps (lib/ 已提交到仓库)
+        working-directory: zmk-studio-ts-client
+        run: npm install --ignore-scripts
+
+      - name: Install app deps
+        working-directory: zmk-studio
+        run: npm install --ignore-scripts
+
+      - name: Setup Rust (universal targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Build & bundle macOS app (universal, unsigned)
+        working-directory: zmk-studio
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run tauri build -- --target universal-apple-darwin
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zmk-studio-macos-installer
+          path: |
+            zmk-studio/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            zmk-studio/src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
