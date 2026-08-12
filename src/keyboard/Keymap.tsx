@@ -64,7 +64,9 @@ export const Keymap = ({
     let header: React.ReactNode =
       behaviors[binding.behaviorId]?.displayName || t("unknown");
     if (isKp) {
-      header = <HidUsageLabel hid_usage={binding.param1} />;
+      header = (
+        <HidUsageLabel hid_usage={binding.param1} className="text-[10px]" />
+      );
     }
 
     return {
@@ -81,7 +83,7 @@ export const Keymap = ({
       children: (
         <div className="flex items-center justify-center">
           {keyName ? (
-            <span className="text-xs font-semibold leading-none text-center">
+            <span className="text-base font-semibold leading-none text-center">
               {keyName}
             </span>
           ) : null}
