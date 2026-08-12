@@ -16,8 +16,21 @@ import {
   EventKind,
 } from "./EventBindingPicker";
 
-/* 只能分配给旋钮旋转的传感器行为，不应出现在普通按键的行为下拉里 */
-const SENSOR_BEHAVIOR_NAMES = new Set([
+/* 不应出现在普通按键行为下拉里的行为：
+ *  - 传感器/旋钮行为（只能分配给旋钮旋转）
+ *  - 宏内部子行为（不能直接绑定到按键） */
+const HIDDEN_BEHAVIORS = new Set([
+  /* 旋钮/传感器行为（设备名 + 显示名） */
+  "scroll_encoder",
+  "scroll_encoder_tk",
+  "volume_encoder",
+  "brightness_encoder",
+  "paged_encoder",
+  "enc_cam_mode",
+  "mouse_encoder",
+  "u_d_encoder",
+  "l_r_encoder",
+  "enc_custom",
   "音量",
   "滚动",
   "抖音滚动",
@@ -28,26 +41,52 @@ const SENSOR_BEHAVIOR_NAMES = new Set([
   "上下方向",
   "左右方向",
   "自定义旋钮",
+  /* 宏内部子行为 */
+  "macro_tap",
+  "macro_press",
+  "macro_release",
+  "macro_tap_time",
+  "macro_wait_time",
+  "macro_pause_for_release",
+  "macro_param_1to1",
+  "macro_param_1to2",
+  "macro_param_2to1",
+  "macro_param_2to2",
 ]);
 
-/* 标准行为设备名 → 中文显示名（客户端翻译，便于用户选择） */
+/* 原生行为设备名 → 中文显示名（客户端翻译，便于用户选择） */
 const BEHAVIOR_NAME_ZH: Record<string, string> = {
   kp: "按键",
   mkp: "鼠标键",
-  to: "层切换",
+  mmv: "鼠标移动",
+  msc: "鼠标滚动",
+  to: "切换层",
   mo: "临时层",
-  trans: "透明",
+  tog: "切换层开关",
+  lt: "层+按键",
+  mt: "修饰+按键",
+  kt: "按键开关",
+  trans: "透明（透传）",
+  none: "无",
   macro: "宏",
   bt: "蓝牙",
-  mt: "按键+层",
-  lt: "层+按键",
-  tt: "双击",
-  td: "连击",
-  rg2: "RGB",
-  rgb_ug: "RGB",
-  bootloader: "进入刷机模式",
+  caps_word: "单词大写",
+  key_repeat: "重复按键",
+  sk: "粘滞键",
+  sl: "粘滞层",
+  sys_reset: "重置",
   reset: "重置",
+  bootloader: "进入刷机模式",
   soft_off: "软关机",
+  studio_unlock: "Studio 解锁",
+  gresc: "Esc/反引号",
+  rgb_ug: "RGB 背光",
+  rg2: "RGB 背光",
+  bl: "键盘背光",
+  ext_power: "外部电源",
+  out: "输出切换",
+  td: "连击",
+  /* 键盘自定义行为（原生，来自你的 keymap） */
   win_l: "Win+L",
   alt_w_f: "Alt+W+F",
   td_power: "电源/锁屏",
@@ -120,7 +159,11 @@ export const BehaviorBindingPicker = ({
   const sortedBehaviors = useMemo(
     () =>
       behaviors
-        .filter((b) => !SENSOR_BEHAVIOR_NAMES.has(b.displayName))
+        .filter(
+          (b) =>
+            !HIDDEN_BEHAVIORS.has(b.displayName) &&
+            !HIDDEN_BEHAVIORS.has(b.displayName.toLowerCase())
+        )
         .map((b) => ({
           ...b,
           displayName: BEHAVIOR_NAME_ZH[b.displayName] ?? b.displayName,
