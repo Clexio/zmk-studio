@@ -171,7 +171,7 @@ export function ModifierArea({
         <Checkbox
           key={m.flag}
           value={String(m.flag)}
-          className="text-nowrap cursor-pointer grid px-2 content-center justify-center bg-base-300 hover:bg-base-100 rac-selected:bg-primary rac-selected:text-primary-content text-xs"
+          className="text-nowrap cursor-pointer grid h-8 px-2.5 content-center justify-center bg-base-300 hover:bg-base-100 rac-selected:bg-primary rac-selected:text-primary-content text-sm"
         >
           {m.name}
         </Checkbox>
