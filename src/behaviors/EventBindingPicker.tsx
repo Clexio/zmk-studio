@@ -192,7 +192,7 @@ export function EventValuePicker({
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs">{label}</label>
+      <label className="text-sm">{label}</label>
       <div className="flex flex-wrap items-center gap-2">
         <select
           className="h-8 rounded px-2 min-w-32 bg-base-100 text-base-content"
@@ -258,7 +258,7 @@ export function KeyEventPicker({
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs">{label}</label>
+      <label className="text-sm">{label}</label>
       <div className="flex flex-wrap items-center gap-2">
         <select
           className="h-8 rounded px-2 min-w-32 bg-base-100 text-base-content"

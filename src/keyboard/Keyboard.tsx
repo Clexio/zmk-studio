@@ -853,7 +853,7 @@ export default function Keyboard() {
                 <>
                   {selectedKeyPosition !== undefined && (
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs">{t("button")}</label>
+                      <label className="text-sm">{t("button")}</label>
                       <BehaviorBindingPicker
                         binding={
                           keymap.layers[selectedLayerIndex].bindings[
