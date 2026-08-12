@@ -179,7 +179,7 @@ export const BehaviorBindingPicker = ({
   hideLabel,
   onBindingChanged,
 }: BehaviorBindingPickerProps) => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [behaviorId, setBehaviorId] = useState(binding.behaviorId);
   const [param1, setParam1] = useState<number | undefined>(binding.param1);
   const [param2, setParam2] = useState<number | undefined>(binding.param2);
@@ -199,10 +199,13 @@ export const BehaviorBindingPicker = ({
         )
         .map((b) => ({
           ...b,
-          displayName: BEHAVIOR_NAME_ZH[b.displayName] ?? b.displayName,
+          displayName:
+            lang === "zh"
+              ? BEHAVIOR_NAME_ZH[b.displayName] ?? b.displayName
+              : b.displayName,
         }))
         .sort((a, b) => a.displayName.localeCompare(b.displayName)),
-    [behaviors]
+    [behaviors, lang]
   );
 
   const isKp = kpBehaviorId !== undefined && behaviorId === kpBehaviorId;

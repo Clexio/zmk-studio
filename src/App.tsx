@@ -27,7 +27,6 @@ import { LockStateContext } from "./rpc/LockStateContext";
 import { UnlockModal } from "./UnlockModal";
 import { valueAfter } from "./misc/async";
 import { AppFooter } from "./AppFooter";
-import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
 
 declare global {
@@ -171,7 +170,6 @@ function App() {
     string | undefined
   >(undefined);
   const [doIt, undo, redo, canUndo, canRedo, reset] = useUndoRedo();
-  const [showAbout, setShowAbout] = useState(false);
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
 
@@ -295,7 +293,6 @@ function App() {
             transports={TRANSPORTS}
             onTransportCreated={onConnect}
           />
-          <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
           <LicenseNoticeModal
             open={showLicenseNotice}
             onClose={() => setShowLicenseNotice(false)}
@@ -314,7 +311,6 @@ function App() {
             />
             <Keyboard />
             <AppFooter
-              onShowAbout={() => setShowAbout(true)}
               onShowLicenseNotice={() => setShowLicenseNotice(true)}
             />
           </div>

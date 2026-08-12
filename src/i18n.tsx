@@ -68,6 +68,9 @@ const en = {
   keySettings: "Key Settings",
   selectedKey: "Selected key",
   button: "Button",
+  searchKey: "Search keys...",
+  searchMedia: "Search media keys...",
+  searchKeyMedia: "Search keys/media...",
   selectBehavior: "Select behavior",
   keepCurrentBehavior: "Keep current behavior",
   eventKindKey: "Key",
@@ -77,7 +80,7 @@ const en = {
   showAllDownloads: "Show all downloads",
   seeGithubReleases: "See GitHub Releases →",
   licenseText:
-    "KeyPlayer Studio is released under the open source Apache 2.0 license. A copy of the NOTICE file from the KeyPlayer Studio repository is included here:",
+    "ZMK Studio is released under the open source Apache 2.0 license. A copy of the NOTICE file from the ZMK Studio repository is included here:",
   someComposite: "Some composite?",
   layerNameLabel: "Layer Name",
 };
@@ -144,6 +147,9 @@ const zh: typeof en = {
   keySettings: "按键设置",
   selectedKey: "选中按键",
   button: "按钮",
+  searchKey: "搜索按键...",
+  searchMedia: "搜索媒体键...",
+  searchKeyMedia: "搜索按键/媒体键...",
   selectBehavior: "选择行为",
   keepCurrentBehavior: "保持当前行为",
   eventKindKey: "按键",
@@ -153,7 +159,7 @@ const zh: typeof en = {
   showAllDownloads: "显示全部下载",
   seeGithubReleases: "查看 GitHub Releases →",
   licenseText:
-    "KeyPlayer Studio 以开源 Apache 2.0 许可证发布。这里包含来自 KeyPlayer Studio 仓库的 NOTICE 文件副本：",
+    "ZMK Studio 以开源 Apache 2.0 许可证发布。这里包含来自 ZMK Studio 仓库的 NOTICE 文件副本：",
   someComposite: "复合参数？",
   layerNameLabel: "层名",
 };

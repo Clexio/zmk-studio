@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import {
   Button,
+  Checkbox,
+  CheckboxGroup,
   ComboBox,
   Input,
   ListBox,
@@ -13,6 +15,7 @@ import {
   hid_usage_get_label,
   hid_usage_page_get_ids,
 } from "../hid-usages";
+import { useI18n } from "../i18n";
 
 const KEY_PAGE = 7;
 const CONSUMER_PAGE = 12;
@@ -99,6 +102,7 @@ export function SearchableKeyDropdown({
 }) {
   const { keys, consumer } = useKeyOptions();
   const options = kind === "key" ? keys : consumer;
+  const { t } = useI18n();
 
   return (
     <ComboBox
@@ -114,7 +118,7 @@ export function SearchableKeyDropdown({
       <div className="flex">
         <Input
           className="p-1 h-8 w-40 rounded-l bg-base-100 text-base-content"
-          placeholder={kind === "key" ? "搜索按键..." : "搜索媒体键..."}
+          placeholder={kind === "key" ? t("searchKey") : t("searchMedia")}
         />
         <Button className="rounded-r bg-primary text-primary-content w-8 h-8 flex justify-center items-center">
           <ChevronDown className="size-4" />
@@ -149,23 +153,30 @@ export function ModifierArea({
   onModsChange: (mods: number) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <CheckboxGroup
+      aria-label="modifiers"
+      className="grid grid-flow-col gap-x-px auto-cols-[minmax(min-content,1fr)] content-stretch divide-x rounded-md overflow-hidden"
+      value={MODIFIER_OPTIONS.filter((m) => mods & m.flag).map((m) =>
+        String(m.flag)
+      )}
+      onChange={(keys) => {
+        let next = 0;
+        for (const k of keys) {
+          next |= parseInt(k);
+        }
+        onModsChange(next);
+      }}
+    >
       {MODIFIER_OPTIONS.map((m) => (
-        <label key={m.flag} className="flex items-center gap-1 text-xs">
-          <input
-            type="checkbox"
-            checked={(mods & m.flag) !== 0}
-            onChange={(e) => {
-              const next = e.target.checked
-                ? mods | m.flag
-                : mods & ~m.flag;
-              onModsChange(next);
-            }}
-          />
+        <Checkbox
+          key={m.flag}
+          value={String(m.flag)}
+          className="text-nowrap cursor-pointer grid px-2 content-center justify-center bg-base-300 hover:bg-base-100 rac-selected:bg-primary rac-selected:text-primary-content text-xs"
+        >
           {m.name}
-        </label>
+        </Checkbox>
       ))}
-    </div>
+    </CheckboxGroup>
   );
 }
 
@@ -179,6 +190,7 @@ export function GroupedKeyDropdown({
   onChange: (kind: EventKind, keyId: number) => void;
 }) {
   const { keys, consumer } = useKeyOptions();
+  const { t } = useI18n();
   const items = [
     ...keys.map((k) => ({ ...k, group: "key" as EventKind })),
     ...consumer.map((k) => ({ ...k, group: "consumer" as EventKind })),
@@ -199,7 +211,7 @@ export function GroupedKeyDropdown({
       <div className="flex">
         <Input
           className="p-1 h-8 w-40 rounded-l bg-base-100 text-base-content"
-          placeholder="搜索按键/媒体键..."
+          placeholder={t("searchKeyMedia")}
         />
         <Button className="rounded-r bg-primary text-primary-content w-8 h-8 flex justify-center items-center">
           <ChevronDown className="size-4" />
@@ -241,6 +253,7 @@ export function EventValuePicker({
   value: number;
   onValueChange: (param: number) => void;
 }) {
+  const { t } = useI18n();
   const decoded = decodeKeycode(value);
   const kind = decoded.kind;
   const mods = kind === "key" ? decoded.mods : 0;
@@ -264,9 +277,9 @@ export function EventValuePicker({
             }
           }}
         >
-          <option value="">选择行为</option>
-          <option value="key">按键</option>
-          <option value="consumer">媒体键</option>
+          <option value="">{t("selectBehavior")}</option>
+          <option value="key">{t("eventKindKey")}</option>
+          <option value="consumer">{t("eventKindConsumer")}</option>
         </select>
         {kind && (
           <SearchableKeyDropdown
@@ -304,6 +317,7 @@ export function KeyEventPicker({
   kpBehaviorId?: number;
   onBindingChange: (binding: BehaviorBinding) => void;
 }) {
+  const { t } = useI18n();
   const isKp =
     kpBehaviorId !== undefined && binding.behaviorId === kpBehaviorId;
   const decoded = isKp ? decodeKeycode(binding.param1) : undefined;
@@ -340,10 +354,10 @@ export function KeyEventPicker({
             }
           }}
         >
-          {!isKp && <option value="keep">保持当前行为</option>}
-          <option value="">选择行为</option>
-          <option value="key">按键</option>
-          <option value="consumer">媒体键</option>
+          {!isKp && <option value="keep">{t("keepCurrentBehavior")}</option>}
+          <option value="">{t("selectBehavior")}</option>
+          <option value="key">{t("eventKindKey")}</option>
+          <option value="consumer">{t("eventKindConsumer")}</option>
         </select>
         {kind && (
           <SearchableKeyDropdown
