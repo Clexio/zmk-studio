@@ -821,9 +821,7 @@ export default function Keyboard() {
                 {t("keySettings")}
               </label>
               <span className="text-xs opacity-70">
-                {t("selectedKey")}: #{selectedKeyPosition} ·{" "}
-                {keymap.layers[selectedLayerIndex]?.name ||
-                  selectedLayerIndex.toLocaleString()}
+                {t("selectedKey")}: #{selectedKeyPosition}
               </span>
             </div>
           )}
@@ -860,7 +858,6 @@ export default function Keyboard() {
                           selectedKeyPosition
                         ]
                       }
-                      behaviors={Object.values(behaviors)}
                       kpBehaviorId={kpBehaviorId}
                       onBindingChange={doUpdateBinding}
                     />
@@ -878,8 +875,6 @@ export default function Keyboard() {
                         <EventValuePicker
                           label={t("knobLeftEvent")}
                           value={isCustom ? sensorBinding.param1 : 0}
-                          behaviors={Object.values(behaviors)}
-                          kpBehaviorId={kpBehaviorId}
                           onValueChange={(v) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId!,
@@ -893,8 +888,6 @@ export default function Keyboard() {
                         <EventValuePicker
                           label={t("knobRightEvent")}
                           value={isCustom ? sensorBinding.param2 : 0}
-                          behaviors={Object.values(behaviors)}
-                          kpBehaviorId={kpBehaviorId}
                           onValueChange={(v) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId!,

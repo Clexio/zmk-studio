@@ -4,7 +4,7 @@ import { useLocalStorageState } from "./misc/useLocalStorageState";
 export type Language = "zh" | "en";
 
 const en = {
-  appName: "Studio",
+  appName: "KeyPlayer Studio",
   connectFailed: "Failed to connect to the chosen device",
   restoreStockSettings: "Restore Stock Settings",
   restoreStockSettingsTitle: "Restore Stock Settings",
@@ -79,7 +79,7 @@ const en = {
 };
 
 const zh: typeof en = {
-  appName: "工作室",
+  appName: "KeyPlayer Studio",
   connectFailed: "无法连接到所选设备",
   restoreStockSettings: "恢复出厂设置",
   restoreStockSettingsTitle: "恢复出厂设置",

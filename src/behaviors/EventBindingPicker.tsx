@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import {
   hid_usage_get_label,
@@ -21,6 +20,52 @@ export const MODIFIER_OPTIONS = [
   { flag: MOD_LGUI, name: "Win" },
 ] as const;
 
+interface Command {
+  name: string;
+  page: number;
+  keyId: number;
+}
+
+const COMMANDS: Command[] = [
+  { name: "播放/暂停", page: CONSUMER_PAGE, keyId: 0xcd },
+  { name: "上一曲", page: CONSUMER_PAGE, keyId: 0xb6 },
+  { name: "下一曲", page: CONSUMER_PAGE, keyId: 0xb5 },
+  { name: "静音", page: CONSUMER_PAGE, keyId: 0xe0 },
+  { name: "音量加", page: CONSUMER_PAGE, keyId: 0xe9 },
+  { name: "音量减", page: CONSUMER_PAGE, keyId: 0xea },
+  { name: "亮度加", page: CONSUMER_PAGE, keyId: 0x6f },
+  { name: "亮度减", page: CONSUMER_PAGE, keyId: 0x70 },
+  { name: "上页", page: KEY_PAGE, keyId: 0x4b },
+  { name: "下页", page: KEY_PAGE, keyId: 0x4e },
+  { name: "上方向", page: KEY_PAGE, keyId: 0x52 },
+  { name: "下方向", page: KEY_PAGE, keyId: 0x51 },
+  { name: "左方向", page: KEY_PAGE, keyId: 0x50 },
+  { name: "右方向", page: KEY_PAGE, keyId: 0x4f },
+  { name: "回车", page: KEY_PAGE, keyId: 0x28 },
+  { name: "退格", page: KEY_PAGE, keyId: 0x2a },
+  { name: "删除", page: KEY_PAGE, keyId: 0x4c },
+  { name: "空格", page: KEY_PAGE, keyId: 0x2c },
+  { name: "Tab", page: KEY_PAGE, keyId: 0x2b },
+  { name: "Esc", page: KEY_PAGE, keyId: 0x29 },
+];
+
+const CUSTOM_COMMAND = "custom-combo";
+
+function keycodeOf(page: number, keyId: number, mods: number): number {
+  const m = page === KEY_PAGE ? mods & 0x0f : 0;
+  return (m << 24) | (page << 16) | (keyId & 0xffff);
+}
+
+function matchCommand(keycode: number): Command | undefined {
+  const mods = (keycode >>> 24) & 0xff;
+  const page = (keycode >>> 16) & 0xff;
+  const keyId = keycode & 0xffff;
+  if (mods !== 0) {
+    return undefined;
+  }
+  return COMMANDS.find((c) => c.page === page && c.keyId === keyId);
+}
+
 interface ComboState {
   keyId: number;
   page: number;
@@ -37,12 +82,6 @@ function decodeKeycode(keycode: number): ComboState {
     return { keyId, page, mods };
   }
   return DEFAULT_COMBO;
-}
-
-function encodeKeycode(state: ComboState): number {
-  const mods =
-    state.page === KEY_PAGE ? state.mods & 0x0f : 0;
-  return (mods << 24) | (state.page << 16) | (state.keyId & 0xffff);
 }
 
 function useKeyOptions() {
@@ -102,7 +141,12 @@ function ComboArea({
         value={`${state.page}-${state.keyId}`}
         onChange={(e) => {
           const [page, id] = e.target.value.split("-").map(Number);
-          onStateChange({ ...state, page, keyId: id, mods: page === KEY_PAGE ? state.mods : 0 });
+          onStateChange({
+            ...state,
+            page,
+            keyId: id,
+            mods: page === KEY_PAGE ? state.mods : 0,
+          });
         }}
       >
         <optgroup label="Keyboard">
@@ -124,36 +168,22 @@ function ComboArea({
   );
 }
 
-function sortBehaviors(behaviors: GetBehaviorDetailsResponse[]) {
-  return [...behaviors].sort((a, b) =>
-    a.displayName.localeCompare(b.displayName)
-  );
-}
-
 /**
  * 左旋/右旋事件选择器：事件编码为 param（自定义旋钮行为）
  */
 export function EventValuePicker({
   label,
   value,
-  behaviors,
-  kpBehaviorId,
   onValueChange,
 }: {
   label: string;
   value: number;
-  behaviors: GetBehaviorDetailsResponse[];
-  kpBehaviorId?: number;
   onValueChange: (param: number) => void;
 }) {
-  const sorted = useMemo(() => sortBehaviors(behaviors), [behaviors]);
-
   const isCombo = (value & COMBO_FLAG) !== 0;
-  const behaviorId = isCombo ? kpBehaviorId : value;
-  const combo = isCombo
-    ? decodeKeycode(value & 0x7fffffff)
-    : DEFAULT_COMBO;
-  const selectedIsKp = kpBehaviorId !== undefined && behaviorId === kpBehaviorId;
+  const keycode = isCombo ? value & 0x7fffffff : 0;
+  const command = isCombo ? matchCommand(keycode) : undefined;
+  const selected = isCombo ? (command ? command.name : CUSTOM_COMMAND) : "";
 
   return (
     <div className="flex flex-col gap-1">
@@ -161,30 +191,34 @@ export function EventValuePicker({
       <div className="flex flex-wrap items-center gap-2">
         <select
           className="h-8 rounded px-2 min-w-36 bg-base-100 text-base-content"
-          value={behaviorId ?? ""}
+          value={selected}
           onChange={(e) => {
-            const id = parseInt(e.target.value);
-            if (kpBehaviorId !== undefined && id === kpBehaviorId) {
-              onValueChange(
-                COMBO_FLAG | encodeKeycode(DEFAULT_COMBO)
-              );
+            const v = e.target.value;
+            if (v === CUSTOM_COMMAND) {
+              onValueChange(COMBO_FLAG | keycodeOf(KEY_PAGE, 0x04, 0));
             } else {
-              onValueChange(id);
+              const cmd = COMMANDS.find((c) => c.name === v);
+              if (cmd) {
+                onValueChange(
+                  COMBO_FLAG | keycodeOf(cmd.page, cmd.keyId, 0)
+                );
+              }
             }
           }}
         >
-          {behaviorId === undefined && <option value="">-</option>}
-          {sorted.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.displayName}
+          <option value="">选择事件</option>
+          {COMMANDS.map((c) => (
+            <option key={c.name} value={c.name}>
+              {c.name}
             </option>
           ))}
+          <option value={CUSTOM_COMMAND}>自定义组合键</option>
         </select>
-        {selectedIsKp && (
+        {selected === CUSTOM_COMMAND && (
           <ComboArea
-            state={combo}
+            state={isCombo ? decodeKeycode(keycode) : DEFAULT_COMBO}
             onStateChange={(s) =>
-              onValueChange(COMBO_FLAG | encodeKeycode(s))
+              onValueChange(COMBO_FLAG | keycodeOf(s.page, s.keyId, s.mods))
             }
           />
         )}
@@ -199,21 +233,24 @@ export function EventValuePicker({
 export function KeyEventPicker({
   label,
   binding,
-  behaviors,
   kpBehaviorId,
   onBindingChange,
 }: {
   label: string;
   binding: BehaviorBinding;
-  behaviors: GetBehaviorDetailsResponse[];
   kpBehaviorId?: number;
   onBindingChange: (binding: BehaviorBinding) => void;
 }) {
-  const sorted = useMemo(() => sortBehaviors(behaviors), [behaviors]);
-  const selectedIsKp = kpBehaviorId !== undefined && binding.behaviorId === kpBehaviorId;
-  const combo = selectedIsKp
-    ? decodeKeycode(binding.param1)
-    : DEFAULT_COMBO;
+  const selectedIsKp =
+    kpBehaviorId !== undefined && binding.behaviorId === kpBehaviorId;
+  const command = selectedIsKp
+    ? matchCommand(binding.param1)
+    : undefined;
+  const selected = selectedIsKp
+    ? command
+      ? command.name
+      : CUSTOM_COMMAND
+    : "-1";
 
   return (
     <div className="flex flex-col gap-1">
@@ -221,33 +258,45 @@ export function KeyEventPicker({
       <div className="flex flex-wrap items-center gap-2">
         <select
           className="h-8 rounded px-2 min-w-36 bg-base-100 text-base-content"
-          value={binding.behaviorId}
+          value={selected}
           onChange={(e) => {
-            const id = parseInt(e.target.value);
-            if (kpBehaviorId !== undefined && id === kpBehaviorId) {
+            const v = e.target.value;
+            if (kpBehaviorId === undefined) {
+              return;
+            }
+            if (v === CUSTOM_COMMAND) {
               onBindingChange({
-                behaviorId: id,
-                param1: encodeKeycode(DEFAULT_COMBO),
+                behaviorId: kpBehaviorId,
+                param1: keycodeOf(KEY_PAGE, 0x04, 0),
                 param2: 0,
               });
             } else {
-              onBindingChange({ behaviorId: id, param1: 0, param2: 0 });
+              const cmd = COMMANDS.find((c) => c.name === v);
+              if (cmd) {
+                onBindingChange({
+                  behaviorId: kpBehaviorId,
+                  param1: keycodeOf(cmd.page, cmd.keyId, 0),
+                  param2: 0,
+                });
+              }
             }
           }}
         >
-          {sorted.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.displayName}
+          {selected === "-1" && <option value="-1">保持当前行为</option>}
+          {COMMANDS.map((c) => (
+            <option key={c.name} value={c.name}>
+              {c.name}
             </option>
           ))}
+          <option value={CUSTOM_COMMAND}>自定义组合键</option>
         </select>
-        {selectedIsKp && (
+        {selected === CUSTOM_COMMAND && selectedIsKp && (
           <ComboArea
-            state={combo}
+            state={decodeKeycode(binding.param1)}
             onStateChange={(s) =>
               onBindingChange({
-                behaviorId: binding.behaviorId,
-                param1: encodeKeycode(s),
+                behaviorId: kpBehaviorId!,
+                param1: keycodeOf(s.page, s.keyId, s.mods),
                 param2: 0,
               })
             }
