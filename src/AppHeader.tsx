@@ -82,7 +82,32 @@ export const AppHeader = ({
           className="h-4"
         />
       </div>
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        <MenuTrigger>
+          <Button
+            className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg flex items-center gap-1 max-w-52"
+            isDisabled={!connectedDeviceLabel}
+          >
+            <span className="truncate">{connectedDeviceLabel}</span>
+            <ChevronDown className="inline-block w-4 shrink-0" />
+          </Button>
+          <Popover>
+            <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
+              <MenuItem
+                className="px-2 py-1 hover:bg-base-200"
+                onAction={onDisconnect}
+              >
+                {t("disconnect")}
+              </MenuItem>
+              <MenuItem
+                className="px-2 py-1 hover:bg-base-200"
+                onAction={() => setShowSettingsReset(true)}
+              >
+                {t("restoreStockSettings")}
+              </MenuItem>
+            </Menu>
+          </Popover>
+        </MenuTrigger>
         <LanguagePicker />
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
@@ -109,31 +134,6 @@ export const AppHeader = ({
           </div>
         </div>
       </GenericModal>
-      <MenuTrigger>
-        <Button
-          className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg"
-          isDisabled={!connectedDeviceLabel}
-        >
-          {connectedDeviceLabel}
-          <ChevronDown className="inline-block w-4" />
-        </Button>
-        <Popover>
-          <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
-            <MenuItem
-              className="px-2 py-1 hover:bg-base-200"
-              onAction={onDisconnect}
-            >
-              {t("disconnect")}
-            </MenuItem>
-            <MenuItem
-              className="px-2 py-1 hover:bg-base-200"
-              onAction={() => setShowSettingsReset(true)}
-            >
-              {t("restoreStockSettings")}
-            </MenuItem>
-          </Menu>
-        </Popover>
-      </MenuTrigger>
       <div className="flex justify-end gap-1 px-2">
         {onUndo && (
           <Tooltip label={t("undo")}>

@@ -902,20 +902,31 @@ export default function Keyboard() {
                         });
                       }}
                     />
-                    {isCustom && customKnobBehaviorId !== undefined && (
-                      <div className="flex flex-col gap-1 pl-2 border-l border-base-300 ml-2">
+                    <div className="flex flex-col gap-1 pl-2 border-l border-base-300 ml-2">
+                      {customKnobBehaviorId === undefined ? (
+                        <span className="text-xs opacity-70">
+                          {t("knobUpdateFirmware")}
+                        </span>
+                      ) : (
+                        <>
                         <label className="text-xs">
                           {t("knobLeftEvent")}
                         </label>
                         <BehaviorSelect
-                          value={sensorBinding.param1 || undefined}
+                          value={
+                            isCustom
+                              ? sensorBinding.param1 || undefined
+                              : undefined
+                          }
                           behaviors={Object.values(behaviors)}
                           placeholder={t("knobEventHint")}
                           onChange={(bid) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId,
                               param1: bid,
-                              param2: sensorBinding.param2,
+                              param2: isCustom
+                                ? sensorBinding.param2
+                                : 0,
                             })
                           }
                         />
@@ -923,19 +934,26 @@ export default function Keyboard() {
                           {t("knobRightEvent")}
                         </label>
                         <BehaviorSelect
-                          value={sensorBinding.param2 || undefined}
+                          value={
+                            isCustom
+                              ? sensorBinding.param2 || undefined
+                              : undefined
+                          }
                           behaviors={Object.values(behaviors)}
                           placeholder={t("knobEventHint")}
                           onChange={(bid) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId,
-                              param1: sensorBinding.param1,
+                              param1: isCustom
+                                ? sensorBinding.param1
+                                : 0,
                               param2: bid,
                             })
                           }
                         />
-                      </div>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })}
