@@ -1,4 +1,13 @@
 import { useMemo } from "react";
+import {
+  Button,
+  ComboBox,
+  Input,
+  ListBox,
+  ListBoxItem,
+  Popover,
+} from "react-aria-components";
+import { ChevronDown } from "lucide-react";
 import { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import {
   hid_usage_get_label,
@@ -79,7 +88,7 @@ function useKeyOptions() {
   }, []);
 }
 
-function KeyDropdown({
+export function SearchableKeyDropdown({
   kind,
   keyId,
   onChange,
@@ -92,17 +101,43 @@ function KeyDropdown({
   const options = kind === "key" ? keys : consumer;
 
   return (
-    <select
-      className="h-8 rounded px-2 min-w-36 bg-base-100 text-base-content"
-      value={keyId}
-      onChange={(e) => onChange(parseInt(e.target.value))}
+    <ComboBox
+      selectedKey={keyId}
+      onSelectionChange={(id) => {
+        if (typeof id === "number") {
+          onChange(id);
+        }
+      }}
+      aria-label="key"
+      className="flex items-center"
     >
-      {options.map((k) => (
-        <option key={`${k.page}-${k.id}`} value={k.id}>
-          {k.name}
-        </option>
-      ))}
-    </select>
+      <div className="flex">
+        <Input
+          className="p-1 h-8 w-40 rounded-l bg-base-100 text-base-content"
+          placeholder={kind === "key" ? "搜索按键..." : "搜索媒体键..."}
+        />
+        <Button className="rounded-r bg-primary text-primary-content w-8 h-8 flex justify-center items-center">
+          <ChevronDown className="size-4" />
+        </Button>
+      </div>
+      <Popover className="w-[var(--trigger-width)] max-h-4 shadow-md text-base-content rounded border-base-content bg-base-100">
+        <ListBox
+          items={options}
+          className="block max-h-[30vh] overflow-auto p-1"
+          selectionMode="single"
+        >
+          {(item) => (
+            <ListBoxItem
+              id={item.id}
+              textValue={item.name}
+              className="px-2 py-1 cursor-pointer hover:bg-base-300 aria-selected:bg-primary aria-selected:text-primary-content"
+            >
+              {item.name}
+            </ListBoxItem>
+          )}
+        </ListBox>
+      </Popover>
+    </ComboBox>
   );
 }
 
@@ -144,31 +179,53 @@ export function GroupedKeyDropdown({
   onChange: (kind: EventKind, keyId: number) => void;
 }) {
   const { keys, consumer } = useKeyOptions();
+  const items = [
+    ...keys.map((k) => ({ ...k, group: "key" as EventKind })),
+    ...consumer.map((k) => ({ ...k, group: "consumer" as EventKind })),
+  ];
 
   return (
-    <select
-      className="h-8 rounded px-2 min-w-36 bg-base-100 text-base-content"
-      value={`${kind}-${keyId}`}
-      onChange={(e) => {
-        const [k, id] = e.target.value.split("-");
-        onChange(k as EventKind, parseInt(id));
+    <ComboBox
+      selectedKey={keyId}
+      onSelectionChange={(id) => {
+        if (typeof id === "number") {
+          const item = items.find((i) => i.id === id);
+          onChange(item?.group ?? kind, id);
+        }
       }}
+      aria-label="key"
+      className="flex items-center"
     >
-      <optgroup label="Keyboard">
-        {keys.map((k) => (
-          <option key={`${k.page}-${k.id}`} value={`${k.page === 7 ? "key" : "consumer"}-${k.id}`}>
-            {k.name}
-          </option>
-        ))}
-      </optgroup>
-      <optgroup label="Consumer">
-        {consumer.map((k) => (
-          <option key={`${k.page}-${k.id}`} value={`consumer-${k.id}`}>
-            {k.name}
-          </option>
-        ))}
-      </optgroup>
-    </select>
+      <div className="flex">
+        <Input
+          className="p-1 h-8 w-40 rounded-l bg-base-100 text-base-content"
+          placeholder="搜索按键/媒体键..."
+        />
+        <Button className="rounded-r bg-primary text-primary-content w-8 h-8 flex justify-center items-center">
+          <ChevronDown className="size-4" />
+        </Button>
+      </div>
+      <Popover className="w-[var(--trigger-width)] max-h-4 shadow-md text-base-content rounded border-base-content bg-base-100">
+        <ListBox
+          items={items}
+          className="block max-h-[30vh] overflow-auto p-1"
+          selectionMode="single"
+        >
+          {(item) => (
+            <ListBoxItem
+              id={item.id}
+              textValue={item.name}
+              className="px-2 py-1 cursor-pointer hover:bg-base-300 aria-selected:bg-primary aria-selected:text-primary-content"
+            >
+              {item.name}
+              {item.group === "consumer" && (
+                <span className="ml-1 text-xs opacity-50">媒体</span>
+              )}
+            </ListBoxItem>
+          )}
+        </ListBox>
+      </Popover>
+    </ComboBox>
   );
 }
 
@@ -188,7 +245,8 @@ export function EventValuePicker({
   const kind = decoded.kind;
   const mods = kind === "key" ? decoded.mods : 0;
   const keyId =
-    kind === "consumer" ? DEFAULT_CONSUMER_ID : decoded.keyId || DEFAULT_KEY_ID;
+    decoded.keyId ||
+    (kind === "consumer" ? DEFAULT_CONSUMER_ID : DEFAULT_KEY_ID);
 
   return (
     <div className="flex flex-col gap-1">
@@ -211,7 +269,7 @@ export function EventValuePicker({
           <option value="consumer">媒体键</option>
         </select>
         {kind && (
-          <KeyDropdown
+          <SearchableKeyDropdown
             kind={kind}
             keyId={keyId}
             onChange={(id) =>
@@ -252,9 +310,8 @@ export function KeyEventPicker({
   const kind = decoded?.kind;
   const mods = kind === "key" ? decoded!.mods : 0;
   const keyId =
-    kind === "consumer"
-      ? DEFAULT_CONSUMER_ID
-      : decoded?.keyId || DEFAULT_KEY_ID;
+    decoded?.keyId ||
+    (kind === "consumer" ? DEFAULT_CONSUMER_ID : DEFAULT_KEY_ID);
 
   return (
     <div className="flex flex-col gap-1">
@@ -289,7 +346,7 @@ export function KeyEventPicker({
           <option value="consumer">媒体键</option>
         </select>
         {kind && (
-          <KeyDropdown
+          <SearchableKeyDropdown
             kind={kind}
             keyId={keyId}
             onChange={(id) =>
