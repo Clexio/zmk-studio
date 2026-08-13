@@ -842,11 +842,6 @@ export default function Keyboard() {
               <label className="text-sm font-semibold">
                 {t("keySettings")}
               </label>
-              <span className="text-xs opacity-70">
-                {t("selectedKey")}: #{selectedKeyPosition} ·{" "}
-                {keymap.layers[selectedLayerIndex]?.name ||
-                  selectedLayerIndex.toLocaleString()}
-              </span>
             </div>
           )}
           {selectedKeyPosition !== undefined &&

@@ -69,6 +69,7 @@ export const FirmwareUpdateModal = ({
   const [step, setStep] = useState<UpdateStep>("bootloader");
   const [latest, setLatest] = useState<FirmwareManifest | null>(null);
   const [errorKey, setErrorKey] = useState<TranslationKey>("checkFailed");
+  const [errorDetail, setErrorDetail] = useState("");
   const busyRef = useRef(false);
   const checkedRef = useRef(false);
 
@@ -79,6 +80,7 @@ export const FirmwareUpdateModal = ({
     busyRef.current = true;
     setPhase("checking");
     setErrorKey("checkFailed");
+    setErrorDetail("");
     try {
       const manifest = await fetchFirmwareManifest();
       setLatest(manifest);
@@ -90,6 +92,7 @@ export const FirmwareUpdateModal = ({
           ? "noUpdateSource"
           : "checkFailed") as TranslationKey
       );
+      setErrorDetail(e?.message ? String(e.message) : String(e));
     } finally {
       busyRef.current = false;
     }
@@ -103,6 +106,7 @@ export const FirmwareUpdateModal = ({
     setPhase("updating");
     setStep("bootloader");
     setErrorKey("updateFailed");
+    setErrorDetail("");
     try {
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
       if (conn) {
@@ -142,6 +146,7 @@ export const FirmwareUpdateModal = ({
     } catch (e: any) {
       setPhase("error");
       setErrorKey((e?.message as TranslationKey) || "updateFailed");
+      setErrorDetail(e?.message ? String(e.message) : String(e));
     } finally {
       busyRef.current = false;
     }
@@ -158,6 +163,7 @@ export const FirmwareUpdateModal = ({
       setPhase("idle");
       setLatest(null);
       setErrorKey("checkFailed");
+      setErrorDetail("");
     }
   }, [open, checkUpdates]);
 
@@ -204,7 +210,14 @@ export const FirmwareUpdateModal = ({
 
         {phase === "done" && <p>{t("firmwareUpdateDone")}</p>}
 
-        {phase === "error" && <p>{t(errorKey)}</p>}
+        {phase === "error" && (
+          <>
+            <p>{t(errorKey)}</p>
+            {errorDetail && (
+              <p className="text-xs opacity-70 break-all">{errorDetail}</p>
+            )}
+          </>
+        )}
 
         <div className="flex justify-end my-2 gap-3">
           {phase === "result" && updateAvailable && (
