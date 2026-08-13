@@ -103,7 +103,7 @@ export const DailyTokenUsage = () => {
         <span className="text-sm">{t("dailyTokens")}</span>
         <span className="ml-2 text-sm">{daily === null ? "—" : daily.toLocaleString()}</span>
       </button>
-      <GenericModal ref={modalRef} onClose={close} className="w-[28rem] max-w-[90vw]">
+      <GenericModal ref={modalRef} onClose={close} className="w-[36rem] max-w-[92vw]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">{t("dailyTokensTitle")}</h2>
@@ -138,10 +138,10 @@ export const DailyTokenUsage = () => {
               return (
                 <div
                   key={idx}
-                  className="flex flex-col items-center justify-center border border-base-300 rounded p-1 min-h-[3rem]"
+                  className="flex flex-col items-center justify-center border border-base-300 rounded p-1 min-h-[3.5rem]"
                 >
-                  <span className="text-xs">{day ?? ""}</span>
-                  <span className="text-xs">
+                  <span className="text-sm">{day ?? ""}</span>
+                  <span className="text-[10px] leading-tight">
                     {day !== null ? (value ? formatTokens(value) : "—") : ""}
                   </span>
                 </div>
