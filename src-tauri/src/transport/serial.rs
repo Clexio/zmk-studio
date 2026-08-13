@@ -25,8 +25,6 @@ fn probe_monitor_port(port_name: &str) -> Option<bool> {
         .timeout(Duration::from_millis(500))
         .open()
         .ok()?;
-    let _ = port.set_dtr(true);
-    let _ = port.set_rts(true);
 
     let _ = port.write(b"PING\n");
 
@@ -129,7 +127,7 @@ pub async fn serial_list_devices(app_handle: AppHandle) -> Result<Vec<super::com
         .into_iter()
         .filter_map(|pi| {
             if let SerialPortType::UsbPort(u) = pi.port_type {
-                let label = if u.vid == Some(ZMK_USB_VID) && u.pid == Some(ZMK_USB_PID) {
+                let label = if u.vid == ZMK_USB_VID && u.pid == ZMK_USB_PID {
                     keyboard_port_label(&u, &pi.port_name)
                 } else {
                     u.product.unwrap_or("Unnamed device".to_string())
