@@ -58,7 +58,7 @@
       ],
       "csp": {
         "default-src": "'self' customprotocol: asset:",
-        "connect-src": "ipc: http://ipc.localhost"
+        "connect-src": "ipc: http://ipc.localhost https://keyplayer.oss-cn-shanghai.aliyuncs.com"
       }
     },
     "windows": [
