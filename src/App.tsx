@@ -315,6 +315,7 @@ function App() {
             onClose={() => setShowFirmwareUpdate(false)}
             conn={conn.conn}
             currentVersion={connectedFirmwareVersion}
+            onUpdated={(v) => setConnectedFirmwareVersion(v)}
           />
           <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
             <AppHeader

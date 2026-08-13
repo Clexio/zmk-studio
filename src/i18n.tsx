@@ -115,6 +115,8 @@ const en = {
     "The serial connection will drop after the keyboard reboots. This is normal. Keep the keyboard connected and wait...",
   stillMounted:
     "The bootloader drive is still mounted. The firmware write may have failed.",
+  firmwareUpdateDoneHint:
+    "If the keyboard does not reconnect automatically, select it again from the device list.",
 };
 
 const zh: typeof en = {
@@ -221,6 +223,7 @@ const zh: typeof en = {
   bootloaderUsbHint:
     "键盘重启后串口断开属正常现象，请保持键盘连接，等待 U 盘弹出…",
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
+  firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
 };
 
 export type TranslationKey = keyof typeof en;

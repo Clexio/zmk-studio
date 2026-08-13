@@ -29,6 +29,7 @@ export interface FirmwareUpdateModalProps {
   onClose: () => void;
   conn: RpcConnection | null;
   currentVersion?: string;
+  onUpdated?: (version: string) => void;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -70,6 +71,7 @@ export const FirmwareUpdateModal = ({
   onClose,
   conn,
   currentVersion,
+  onUpdated,
 }: FirmwareUpdateModalProps) => {
   const { t } = useI18n();
   const modalRef = useModalRef(open);
@@ -160,6 +162,7 @@ export const FirmwareUpdateModal = ({
       }
 
       setPhase("done");
+      onUpdated?.(latest.version);
     } catch (e: any) {
       setPhase("error");
       setErrorKey((e?.message as TranslationKey) || "updateFailed");
@@ -232,7 +235,14 @@ export const FirmwareUpdateModal = ({
           </div>
         )}
 
-        {phase === "done" && <p>{t("firmwareUpdateDone")}</p>}
+        {phase === "done" && (
+          <>
+            <p>{t("firmwareUpdateDone")}</p>
+            <p className="text-xs opacity-70">
+              {t("firmwareUpdateDoneHint")}
+            </p>
+          </>
+        )}
 
         {phase === "error" && (
           <>
