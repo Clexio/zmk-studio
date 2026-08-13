@@ -68,7 +68,6 @@ export const FirmwareUpdateModal = ({
   const [phase, setPhase] = useState<Phase>("idle");
   const [step, setStep] = useState<UpdateStep>("bootloader");
   const [latest, setLatest] = useState<FirmwareManifest | null>(null);
-  const [progress, setProgress] = useState(0);
   const [errorKey, setErrorKey] = useState<TranslationKey>("checkFailed");
   const busyRef = useRef(false);
   const checkedRef = useRef(false);
@@ -103,7 +102,6 @@ export const FirmwareUpdateModal = ({
     busyRef.current = true;
     setPhase("updating");
     setStep("bootloader");
-    setProgress(0);
     setErrorKey("updateFailed");
     try {
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
@@ -123,13 +121,10 @@ export const FirmwareUpdateModal = ({
       if (!file) {
         throw new Error("noFile");
       }
-      const data = await downloadFirmwareFile(file, (loaded, total) => {
-        setProgress(total ? Math.round((loaded / total) * 100) : 0);
-      });
+      const data = await downloadFirmwareFile(file);
 
       // 4) SHA-256 校验
       setStep("verifying");
-      setProgress(0);
       const hash = await sha256Hex(data);
       if (
         file.sha256 &&
@@ -199,20 +194,11 @@ export const FirmwareUpdateModal = ({
           <div className="flex flex-col gap-2">
             {step === "bootloader" && <p>{t("enteringBootloader")}</p>}
             {step === "downloading" && (
-              <p>
-                {t("downloadingFirmware")}: {progress}%
-              </p>
+              <p>{t("downloadingFirmware")}…</p>
             )}
             {step === "verifying" && <p>{t("verifyingFirmware")}</p>}
             {step === "flashing" && <p>{t("flashingFirmware")}</p>}
             {step === "rebooting" && <p>{t("waitingForReboot")}</p>}
-            {step === "downloading" && (
-              <progress
-                className="w-full"
-                value={progress}
-                max={100}
-              />
-            )}
           </div>
         )}
 

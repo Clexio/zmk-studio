@@ -5,7 +5,9 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             find_uf2_drive,
-            write_uf2_to_drive
+            write_uf2_to_drive,
+            http_get_text,
+            http_get_bytes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -71,4 +73,29 @@ fn write_uf2_to_drive(drive: String, data: Vec<u8>) -> Result<(), String> {
         return Err("Invalid UF2 data".to_string());
     }
     std::fs::write(root.join("firmware.uf2"), data).map_err(|err| err.to_string())
+}
+
+/// 用后端直接请求文本（绕开 WebView 的跨域限制）。
+#[tauri::command]
+async fn http_get_text(url: String) -> Result<String, String> {
+    let resp = reqwest::get(&url).await.map_err(|err| err.to_string())?;
+    let status = resp.status();
+    if !status.is_success() {
+        return Err(format!("HTTP {}", status.as_u16()));
+    }
+    resp.text().await.map_err(|err| err.to_string())
+}
+
+/// 用后端直接下载字节（绕开 WebView 的跨域限制）。
+#[tauri::command]
+async fn http_get_bytes(url: String) -> Result<Vec<u8>, String> {
+    let resp = reqwest::get(&url).await.map_err(|err| err.to_string())?;
+    let status = resp.status();
+    if !status.is_success() {
+        return Err(format!("HTTP {}", status.as_u16()));
+    }
+    resp.bytes()
+        .await
+        .map(|bytes| bytes.to_vec())
+        .map_err(|err| err.to_string())
 }

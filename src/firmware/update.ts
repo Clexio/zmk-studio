@@ -1,4 +1,5 @@
 import { FIRMWARE_MANIFEST_URL, FIRMWARE_MAIN_FILE } from "./config";
+import { http_get_bytes, http_get_text } from "../tauri/http";
 
 export interface FirmwareManifestFile {
   name: string;
@@ -22,12 +23,8 @@ export async function fetchFirmwareManifest(): Promise<FirmwareManifest> {
     throw new FirmwareUpdateError("NOT_CONFIGURED");
   }
 
-  const resp = await fetch(FIRMWARE_MANIFEST_URL, { cache: "no-store" });
-  if (!resp.ok) {
-    throw new FirmwareUpdateError(`HTTP ${resp.status}`);
-  }
-
-  const data = (await resp.json()) as FirmwareManifest;
+  const text = await http_get_text(FIRMWARE_MANIFEST_URL);
+  const data = JSON.parse(text) as FirmwareManifest;
   if (!data || typeof data.version !== "string" || !Array.isArray(data.files)) {
     throw new FirmwareUpdateError("BAD_MANIFEST");
   }
@@ -39,39 +36,9 @@ export async function downloadFirmwareFile(
   file: FirmwareManifestFile,
   onProgress?: (loaded: number, total: number) => void
 ): Promise<Uint8Array> {
-  const resp = await fetch(file.url, { cache: "no-store" });
-  if (!resp.ok) {
-    throw new FirmwareUpdateError(`HTTP ${resp.status}`);
-  }
-
-  const total = Number(resp.headers.get("content-length")) || file.size || 0;
-  if (!resp.body) {
-    return new Uint8Array(await resp.arrayBuffer());
-  }
-
-  const reader = resp.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let loaded = 0;
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    if (value) {
-      chunks.push(value);
-      loaded += value.length;
-      onProgress?.(loaded, total);
-    }
-  }
-
-  const out = new Uint8Array(loaded);
-  let offset = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return out;
+  const data = await http_get_bytes(file.url);
+  onProgress?.(data.length, data.length);
+  return data;
 }
 
 export async function sha256Hex(data: Uint8Array): Promise<string> {

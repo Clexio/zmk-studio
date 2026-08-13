@@ -107,6 +107,8 @@ const en = {
   noFile: "No firmware file found in the update manifest.",
   hashMismatch:
     "Firmware verification failed. The download may be corrupted.",
+  restoreDefault: "Restore default",
+  factoryDefault: "Factory default",
 };
 
 const zh: typeof en = {
@@ -206,6 +208,8 @@ const zh: typeof en = {
   noDrive: "未检测到刷机盘，请确认键盘已通过 USB 连接，或双击复位键进入刷机模式",
   noFile: "更新清单中没有找到固件文件",
   hashMismatch: "固件校验失败，下载的文件可能已损坏",
+  restoreDefault: "恢复默认",
+  factoryDefault: "出厂默认",
 };
 
 export type TranslationKey = keyof typeof en;

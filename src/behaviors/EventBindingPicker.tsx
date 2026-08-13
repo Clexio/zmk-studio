@@ -11,6 +11,7 @@ import {
 } from "react-aria-components";
 import { ChevronDown } from "lucide-react";
 import { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
+import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import {
   hid_usage_get_label,
   hid_usage_page_get_ids,
@@ -61,6 +62,61 @@ export function encodeKeycode(
   const m = kind === "key" ? mods & 0xff : 0;
   const page = kind === "key" ? KEY_PAGE : CONSUMER_PAGE;
   return (m << 24) | (page << 16) | (keyId & 0xffff);
+}
+
+// 固件出厂旋钮行为对应的左旋/右旋默认键值（按行为设备名/显示名匹配）
+const SENSOR_DEFAULT_KEYS: Record<string, { left: number; right: number }> = {
+  volume_encoder: {
+    left: encodeKeycode("consumer", 0xe9, 0), // 音量+
+    right: encodeKeycode("consumer", 0xea, 0), // 音量-
+  },
+  brightness_encoder: {
+    left: encodeKeycode("consumer", 0x6f, 0), // 亮度+
+    right: encodeKeycode("consumer", 0x70, 0), // 亮度-
+  },
+  paged_encoder: {
+    left: encodeKeycode("key", 0x4b, 0), // PageUp
+    right: encodeKeycode("key", 0x4e, 0), // PageDown
+  },
+  u_d_encoder: {
+    left: encodeKeycode("key", 0x52, 0), // Up
+    right: encodeKeycode("key", 0x51, 0), // Down
+  },
+  l_r_encoder: {
+    left: encodeKeycode("key", 0x50, 0), // Left
+    right: encodeKeycode("key", 0x4f, 0), // Right
+  },
+  "音量": {
+    left: encodeKeycode("consumer", 0xe9, 0),
+    right: encodeKeycode("consumer", 0xea, 0),
+  },
+  "亮度": {
+    left: encodeKeycode("consumer", 0x6f, 0),
+    right: encodeKeycode("consumer", 0x70, 0),
+  },
+  "翻页": {
+    left: encodeKeycode("key", 0x4b, 0),
+    right: encodeKeycode("key", 0x4e, 0),
+  },
+  "上下方向": {
+    left: encodeKeycode("key", 0x52, 0),
+    right: encodeKeycode("key", 0x51, 0),
+  },
+  "左右方向": {
+    left: encodeKeycode("key", 0x50, 0),
+    right: encodeKeycode("key", 0x4f, 0),
+  },
+};
+
+export function sensorDefaultKeycode(
+  behavior: GetBehaviorDetailsResponse | undefined,
+  side: "left" | "right"
+): number | undefined {
+  if (!behavior) {
+    return undefined;
+  }
+  const entry = SENSOR_DEFAULT_KEYS[behavior.displayName];
+  return entry?.[side];
 }
 
 const DEFAULT_KEY_ID = 0x04; // A
@@ -231,7 +287,9 @@ export function GroupedKeyDropdown({
             >
               {item.name}
               {item.group === "consumer" && (
-                <span className="ml-1 text-xs opacity-50">媒体</span>
+                <span className="ml-1 text-xs opacity-50">
+                  {t("eventKindConsumer")}
+                </span>
               )}
             </ListBoxItem>
           )}
@@ -247,19 +305,28 @@ export function GroupedKeyDropdown({
 export function EventValuePicker({
   label,
   value,
+  fallbackKeycode,
   onValueChange,
 }: {
   label: string;
   value: number;
+  fallbackKeycode?: number;
   onValueChange: (param: number) => void;
 }) {
   const { t } = useI18n();
-  const decoded = decodeKeycode(value);
+  const effectiveValue = value || fallbackKeycode || 0;
+  const decoded = decodeKeycode(effectiveValue);
   const kind = decoded.kind;
   const mods = kind === "key" ? decoded.mods : 0;
   const keyId =
     decoded.keyId ||
     (kind === "consumer" ? DEFAULT_CONSUMER_ID : DEFAULT_KEY_ID);
+  const isDefault = !value && fallbackKeycode !== undefined;
+  const keyLabel =
+    kind !== undefined && keyId
+      ? hid_usage_get_label(kind === "consumer" ? CONSUMER_PAGE : KEY_PAGE, keyId) ||
+        undefined
+      : undefined;
 
   return (
     <div className="flex flex-col gap-1">
@@ -299,6 +366,11 @@ export function EventValuePicker({
           />
         )}
       </div>
+      {isDefault && keyLabel && (
+        <span className="text-xs opacity-60">
+          {t("factoryDefault")}: {keyLabel}
+        </span>
+      )}
     </div>
   );
 }

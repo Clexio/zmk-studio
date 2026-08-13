@@ -100,15 +100,16 @@ export const AppHeader = ({
             isDisabled={!connectedDeviceLabel}
           >
             <span className="truncate">{connectedDeviceLabel}</span>
-            {firmwareVersion && (
-              <span className="font-mono text-xs opacity-70 shrink-0">
-                {firmwareVersion}
-              </span>
-            )}
             <ChevronDown className="inline-block w-4 shrink-0" />
           </Button>
           <Popover>
             <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
+              <MenuItem
+                className="px-2 py-1 opacity-80"
+                isDisabled
+              >
+                {firmwareVersion || t("unknown")}
+              </MenuItem>
               <MenuItem
                 className="px-2 py-1 hover:bg-base-200"
                 onAction={onDisconnect}

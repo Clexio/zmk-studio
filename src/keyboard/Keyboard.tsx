@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -30,6 +31,7 @@ import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import {
   EventValuePicker,
+  sensorDefaultKeycode,
 } from "../behaviors/EventBindingPicker";
 import { produce } from "immer";
 import { LockStateContext } from "../rpc/LockStateContext";
@@ -255,6 +257,24 @@ export default function Keyboard() {
       (b) => b.displayName === "按键" || b.displayName === "kp"
     )?.id;
   }, [behaviors]);
+
+  const originalSensorBindingsRef = useRef<Map<string, BehaviorBinding>>(
+    new Map()
+  );
+
+  useEffect(() => {
+    if (!keymap) {
+      return;
+    }
+    keymap.layers.forEach((layer, li) => {
+      layer.sensorBindings?.forEach((sb, si) => {
+        const mapKey = `${li}:${si}`;
+        if (!originalSensorBindingsRef.current.has(mapKey)) {
+          originalSensorBindingsRef.current.set(mapKey, sb);
+        }
+      });
+    });
+  }, [keymap]);
 
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
@@ -880,11 +900,26 @@ export default function Keyboard() {
                     }
                     const isCustom =
                       sensorBinding.behaviorId === customKnobBehaviorId;
+                    const sensorBehavior =
+                      behaviors[sensorBinding.behaviorId];
+                    const leftDefault = sensorDefaultKeycode(
+                      sensorBehavior,
+                      "left"
+                    );
+                    const rightDefault = sensorDefaultKeycode(
+                      sensorBehavior,
+                      "right"
+                    );
+                    const original =
+                      originalSensorBindingsRef.current.get(
+                        `${selectedLayerIndex}:${si}`
+                      );
                     return (
                       <div key={si} className="flex flex-col gap-2">
                         <EventValuePicker
                           label={t("knobLeftEvent")}
                           value={isCustom ? sensorBinding.param1 : 0}
+                          fallbackKeycode={leftDefault}
                           onValueChange={(v) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId!,
@@ -898,6 +933,7 @@ export default function Keyboard() {
                         <EventValuePicker
                           label={t("knobRightEvent")}
                           value={isCustom ? sensorBinding.param2 : 0}
+                          fallbackKeycode={rightDefault}
                           onValueChange={(v) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId!,
@@ -908,6 +944,16 @@ export default function Keyboard() {
                             })
                           }
                         />
+                        {isCustom && original && (
+                          <button
+                            className="self-start rounded bg-base-200 hover:bg-base-300 px-3 py-1 text-sm"
+                            onClick={() =>
+                              doUpdateSensorBinding(si, original)
+                            }
+                          >
+                            {t("restoreDefault")}
+                          </button>
+                        )}
                       </div>
                     );
                   })}
