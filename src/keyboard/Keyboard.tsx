@@ -24,6 +24,7 @@ import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-clie
 
 import { LayerPicker } from "./LayerPicker";
 import { PhysicalLayoutPicker } from "./PhysicalLayoutPicker";
+import { DailyTokenUsage } from "./DailyTokenUsage";
 import { Keymap as KeymapComp } from "./Keymap";
 import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
 import { ConnectionContext } from "../rpc/ConnectionContext";
@@ -774,6 +775,7 @@ export default function Keyboard() {
   return (
     <div className="grid grid-cols-[auto_1fr] grid-rows-[1fr_minmax(10em,auto)] bg-base-300 max-w-full min-w-0 min-h-0">
       <div className="p-2 flex flex-col gap-2 bg-base-200 row-span-2">
+        <DailyTokenUsage />
         {layouts && (
           <div className="col-start-3 row-start-1 row-end-2">
             <PhysicalLayoutPicker
