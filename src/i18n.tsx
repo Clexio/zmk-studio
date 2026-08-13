@@ -111,6 +111,10 @@ const en = {
     "Firmware verification failed. The download may be corrupted.",
   restoreDefault: "Restore default",
   factoryDefault: "Factory default",
+  bootloaderUsbHint:
+    "The serial connection will drop after the keyboard reboots. This is normal. Keep the keyboard connected and wait...",
+  stillMounted:
+    "The bootloader drive is still mounted. The firmware write may have failed.",
 };
 
 const zh: typeof en = {
@@ -214,6 +218,9 @@ const zh: typeof en = {
   hashMismatch: "固件校验失败，下载的文件可能已损坏",
   restoreDefault: "恢复默认",
   factoryDefault: "出厂默认",
+  bootloaderUsbHint:
+    "键盘重启后串口断开属正常现象，请保持键盘连接，等待 U 盘弹出…",
+  stillMounted: "刷机盘仍然存在，固件写入可能失败",
 };
 
 export type TranslationKey = keyof typeof en;

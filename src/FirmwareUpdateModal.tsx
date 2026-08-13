@@ -36,9 +36,13 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function waitForUf2Drive(timeoutMs: number): Promise<string | null> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const drive = await find_uf2_drive();
-    if (drive) {
-      return drive;
+    try {
+      const drive = await find_uf2_drive();
+      if (drive) {
+        return drive;
+      }
+    } catch {
+      // 检测命令偶发失败时继续重试，不中断流程
     }
     await sleep(500);
   }
@@ -48,9 +52,13 @@ async function waitForUf2Drive(timeoutMs: number): Promise<string | null> {
 async function waitForUf2DriveGone(timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const drive = await find_uf2_drive();
-    if (!drive) {
-      return true;
+    try {
+      const drive = await find_uf2_drive();
+      if (!drive) {
+        return true;
+      }
+    } catch {
+      // 检测命令偶发失败时继续重试
     }
     await sleep(500);
   }
@@ -139,8 +147,17 @@ export const FirmwareUpdateModal = ({
 
       // 5) 写入 U 盘，引导程序自动烧录并重启
       setStep("flashing");
-      await write_uf2_to_drive(drive, data);
-      await waitForUf2DriveGone(30000);
+      try {
+        await write_uf2_to_drive(drive, data);
+      } catch (e) {
+        // 引导程序写完最后一块会立即重启并弹出 U 盘，
+        // 此时写入可能报“设备断开”，但烧录实际已经完成，属正常现象。
+        console.warn("UF2 write reported an error (drive may have reset):", e);
+      }
+      const driveGone = await waitForUf2DriveGone(30000);
+      if (!driveGone) {
+        throw new Error("stillMounted");
+      }
 
       setPhase("done");
     } catch (e: any) {
@@ -198,7 +215,14 @@ export const FirmwareUpdateModal = ({
 
         {phase === "updating" && (
           <div className="flex flex-col gap-2">
-            {step === "bootloader" && <p>{t("enteringBootloader")}</p>}
+            {step === "bootloader" && (
+              <>
+                <p>{t("enteringBootloader")}</p>
+                <p className="text-xs opacity-70">
+                  {t("bootloaderUsbHint")}
+                </p>
+              </>
+            )}
             {step === "downloading" && (
               <p>{t("downloadingFirmware")}…</p>
             )}
