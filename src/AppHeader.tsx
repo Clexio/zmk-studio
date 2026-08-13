@@ -12,7 +12,14 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  Undo2,
+  Redo2,
+  Save,
+  Trash2,
+  Download,
+} from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { LanguagePicker, useI18n } from "./i18n";
@@ -20,18 +27,21 @@ import { useTheme } from "./misc/useTheme";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
+  firmwareVersion?: string;
   onSave?: () => void | Promise<void>;
   onDiscard?: () => void | Promise<void>;
   onUndo?: () => Promise<void>;
   onRedo?: () => Promise<void>;
   onResetSettings?: () => void | Promise<void>;
   onDisconnect?: () => void | Promise<void>;
+  onOpenFirmwareUpdate?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
 }
 
 export const AppHeader = ({
   connectedDeviceLabel,
+  firmwareVersion,
   canRedo,
   canUndo,
   onRedo,
@@ -40,6 +50,7 @@ export const AppHeader = ({
   onDiscard,
   onDisconnect,
   onResetSettings,
+  onOpenFirmwareUpdate,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
   const { t } = useI18n();
@@ -89,6 +100,11 @@ export const AppHeader = ({
             isDisabled={!connectedDeviceLabel}
           >
             <span className="truncate">{connectedDeviceLabel}</span>
+            {firmwareVersion && (
+              <span className="font-mono text-xs opacity-70 shrink-0">
+                {firmwareVersion}
+              </span>
+            )}
             <ChevronDown className="inline-block w-4 shrink-0" />
           </Button>
           <Popover>
@@ -108,6 +124,18 @@ export const AppHeader = ({
             </Menu>
           </Popover>
         </MenuTrigger>
+        <Tooltip label={t("firmwareUpdate")}>
+          <Button
+            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+            isDisabled={!connectedDeviceLabel}
+            onPress={onOpenFirmwareUpdate}
+          >
+            <Download
+              className="inline-block w-4 mx-1"
+              aria-label={t("firmwareUpdate")}
+            />
+          </Button>
+        </Tooltip>
         <LanguagePicker />
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">

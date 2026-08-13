@@ -28,6 +28,7 @@ import { UnlockModal } from "./UnlockModal";
 import { valueAfter } from "./misc/async";
 import { AppFooter } from "./AppFooter";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
+import { FirmwareUpdateModal } from "./FirmwareUpdateModal";
 
 declare global {
   interface Window {
@@ -125,6 +126,7 @@ async function connect(
   transport: RpcTransport,
   setConn: Dispatch<ConnectionState>,
   setConnectedDeviceName: Dispatch<string | undefined>,
+  setConnectedFirmwareVersion: Dispatch<string | undefined>,
   signal: AbortSignal
 ) {
   let conn = await create_rpc_connection(transport, { signal });
@@ -161,6 +163,7 @@ async function connect(
     });
 
   setConnectedDeviceName(details.name);
+  setConnectedFirmwareVersion(details.version);
   setConn({ conn });
 }
 
@@ -169,8 +172,12 @@ function App() {
   const [connectedDeviceName, setConnectedDeviceName] = useState<
     string | undefined
   >(undefined);
+  const [connectedFirmwareVersion, setConnectedFirmwareVersion] = useState<
+    string | undefined
+  >(undefined);
   const [doIt, undo, redo, canUndo, canRedo, reset] = useUndoRedo();
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
+  const [showFirmwareUpdate, setShowFirmwareUpdate] = useState(false);
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
 
   const [lockState, setLockState] = useState<LockState>(
@@ -278,9 +285,15 @@ function App() {
     (t: RpcTransport) => {
       const ac = new AbortController();
       setConnectionAbort(ac);
-      connect(t, setConn, setConnectedDeviceName, ac.signal);
+      connect(
+        t,
+        setConn,
+        setConnectedDeviceName,
+        setConnectedFirmwareVersion,
+        ac.signal
+      );
     },
-    [setConn, setConnectedDeviceName, setConnectedDeviceName]
+    [setConn, setConnectedDeviceName, setConnectedFirmwareVersion]
   );
 
   return (
@@ -297,9 +310,16 @@ function App() {
             open={showLicenseNotice}
             onClose={() => setShowLicenseNotice(false)}
           />
+          <FirmwareUpdateModal
+            open={showFirmwareUpdate}
+            onClose={() => setShowFirmwareUpdate(false)}
+            conn={conn.conn}
+            currentVersion={connectedFirmwareVersion}
+          />
           <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
             <AppHeader
               connectedDeviceLabel={connectedDeviceName}
+              firmwareVersion={connectedFirmwareVersion}
               canUndo={canUndo}
               canRedo={canRedo}
               onUndo={undo}
@@ -308,6 +328,7 @@ function App() {
               onDiscard={discard}
               onDisconnect={disconnect}
               onResetSettings={resetSettings}
+              onOpenFirmwareUpdate={() => setShowFirmwareUpdate(true)}
             />
             <Keyboard />
             <AppFooter

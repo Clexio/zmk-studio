@@ -83,6 +83,30 @@ const en = {
     "ZMK Studio is released under the open source Apache 2.0 license. A copy of the NOTICE file from the ZMK Studio repository is included here:",
   someComposite: "Some composite?",
   layerNameLabel: "Layer Name",
+  firmwareUpdate: "Firmware Update",
+  currentVersion: "Current version",
+  latestVersion: "Latest version",
+  checkForUpdates: "Check for updates",
+  checkingForUpdates: "Checking for updates",
+  updateAvailable: "A new firmware version is available.",
+  upToDate: "Your firmware is up to date.",
+  updateNow: "Update now",
+  noUpdateSource:
+    "Firmware update source is not configured. Please set FIRMWARE_MANIFEST_URL first.",
+  checkFailed:
+    "Failed to check for firmware updates. Please check your network connection.",
+  enteringBootloader: "Sending keyboard into bootloader mode...",
+  downloadingFirmware: "Downloading firmware",
+  verifyingFirmware: "Verifying firmware...",
+  flashingFirmware: "Flashing firmware. Do not unplug the keyboard!",
+  waitingForReboot: "Waiting for the keyboard to reboot...",
+  firmwareUpdateDone: "Firmware update complete!",
+  updateFailed: "Firmware update failed.",
+  noDrive:
+    "Bootloader drive not detected. Make sure the keyboard is connected via USB, or double-click the reset button.",
+  noFile: "No firmware file found in the update manifest.",
+  hashMismatch:
+    "Firmware verification failed. The download may be corrupted.",
 };
 
 const zh: typeof en = {
@@ -162,9 +186,29 @@ const zh: typeof en = {
     "ZMK Studio 以开源 Apache 2.0 许可证发布。这里包含来自 ZMK Studio 仓库的 NOTICE 文件副本：",
   someComposite: "复合参数？",
   layerNameLabel: "层名",
+  firmwareUpdate: "固件更新",
+  currentVersion: "当前版本",
+  latestVersion: "最新版本",
+  checkForUpdates: "检查更新",
+  checkingForUpdates: "正在检查更新",
+  updateAvailable: "发现新版本固件",
+  upToDate: "固件已是最新版本",
+  updateNow: "立即更新",
+  noUpdateSource: "固件更新源尚未配置，请先在客户端配置中填写更新源地址",
+  checkFailed: "检查固件更新失败，请检查网络连接",
+  enteringBootloader: "正在让键盘进入刷机模式…",
+  downloadingFirmware: "正在下载固件",
+  verifyingFirmware: "正在校验固件…",
+  flashingFirmware: "正在烧录固件，请勿拔出键盘！",
+  waitingForReboot: "正在等待键盘重启…",
+  firmwareUpdateDone: "固件更新完成！",
+  updateFailed: "固件更新失败",
+  noDrive: "未检测到刷机盘，请确认键盘已通过 USB 连接，或双击复位键进入刷机模式",
+  noFile: "更新清单中没有找到固件文件",
+  hashMismatch: "固件校验失败，下载的文件可能已损坏",
 };
 
-type TranslationKey = keyof typeof en;
+export type TranslationKey = keyof typeof en;
 export type I18nTranslate = (key: TranslationKey) => string;
 
 const LanguageContext = createContext<{
