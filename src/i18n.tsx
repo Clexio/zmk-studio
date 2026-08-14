@@ -117,6 +117,8 @@ const en = {
     "The bootloader drive is still mounted. The firmware write may have failed.",
   firmwareUpdateDoneHint:
     "If the keyboard does not reconnect automatically, select it again from the device list.",
+  firmwareUpdateWarnings:
+    "Note: The update takes about 1-3 minutes. Do not close this window during the update; closing it may break existing features.\nNote: An unknown disk folder may pop up during the update; do not close it.\nNote: Bluetooth pairing information will be lost after the update. Power the keyboard off and on, remove the old pairing on both the computer and the keyboard, then pair again. Otherwise Bluetooth will not connect.",
 };
 
 const zh: typeof en = {
@@ -224,6 +226,8 @@ const zh: typeof en = {
     "键盘重启后串口断开属正常现象，请保持键盘连接，等待 U 盘弹出…",
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
   firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
+  firmwareUpdateWarnings:
+    "注：版本更新耗时约1-3分钟，更新途中请勿关闭窗口，关闭窗口可能导致现有功能失效。\n注：更新时可能会弹出未知磁盘文件夹，请勿关闭。\n注：固件更新后蓝牙配对信息失效，请将键盘手动关机重启，并且删除设备端和键盘端的蓝牙配对信息，重新配对。否则蓝牙无法连接成功。",
 };
 
 export type TranslationKey = keyof typeof en;

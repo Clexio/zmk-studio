@@ -18,7 +18,6 @@ import {
   Redo2,
   Save,
   Trash2,
-  Download,
 } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
@@ -125,19 +124,16 @@ export const AppHeader = ({
             </Menu>
           </Popover>
         </MenuTrigger>
+        <LanguagePicker />
         <Tooltip label={t("firmwareUpdate")}>
           <Button
-            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+            className="flex items-center justify-center px-2 py-1 rounded text-sm enabled:hover:bg-base-300 disabled:opacity-50"
             isDisabled={!connectedDeviceLabel}
             onPress={onOpenFirmwareUpdate}
           >
-            <Download
-              className="inline-block w-4 mx-1"
-              aria-label={t("firmwareUpdate")}
-            />
+            {t("firmwareUpdate")}
           </Button>
         </Tooltip>
-        <LanguagePicker />
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
         <h2 className="my-2 text-lg">{t("restoreStockSettingsTitle")}</h2>

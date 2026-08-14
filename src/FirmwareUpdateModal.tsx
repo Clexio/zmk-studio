@@ -253,6 +253,10 @@ export const FirmwareUpdateModal = ({
           </>
         )}
 
+        <div className="text-sm bg-gray-200 rounded p-2 whitespace-pre-line">
+          {t("firmwareUpdateWarnings")}
+        </div>
+
         <div className="flex justify-end my-2 gap-3">
           {phase === "result" && updateAvailable && (
             <button
