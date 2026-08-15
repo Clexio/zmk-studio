@@ -64,6 +64,20 @@ fn sha256_hex(data: &[u8]) -> String {
         .collect()
 }
 
+/// 轮询等待某个条件成立（用于“启动后等运行、停止后等退出”）
+fn wait_until(mut cond: impl FnMut() -> bool, timeout: Duration) -> bool {
+    let deadline = std::time::Instant::now() + timeout;
+    loop {
+        if cond() {
+            return true;
+        }
+        if std::time::Instant::now() >= deadline {
+            return cond();
+        }
+        std::thread::sleep(Duration::from_millis(300));
+    }
+}
+
 pub fn status() -> MonitorStatus {
     let dir = monitor_dir();
     let version_file = dir.join("version.txt");
@@ -143,6 +157,29 @@ fn run_hidden(bat: &Path) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+#[cfg(target_os = "windows")]
+fn stop_any_monitor_fallback() -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    // 与 停止任务监控.bat 等价的通用停止命令：
+    // 按命令行特征杀掉 codex-monitor / ble-pusher / watchdog / 启动VBS
+    let script = r#"Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='wscript.exe'" | Where-Object { $_.CommandLine -match 'codex-monitor|ble-pusher|watchdog|\.vbs' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"#;
+    std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-WindowStyle",
+            "Hidden",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            script,
+        ])
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn monitor_start() -> Result<MonitorStatus, String> {
     if !monitor_dir().join("version.txt").exists() {
@@ -164,6 +201,8 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
         if start_bat.exists() {
             run_hidden(&start_bat)?;
         }
+        // 等监控真正运行起来再返回，避免界面误显示“已关闭”
+        wait_until(monitor_is_running, Duration::from_secs(15));
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -183,7 +222,12 @@ pub fn monitor_stop() -> Result<MonitorStatus, String> {
         let stop_bat = monitor_dir().join("停止任务监控.bat");
         if stop_bat.exists() {
             run_hidden(&stop_bat)?;
+        } else {
+            // 客户端还没下载过自己的脚本，但监控可能正从其它目录运行
+            stop_any_monitor_fallback()?;
         }
+        // 等监控真正退出再返回，避免界面误显示“已打开”
+        wait_until(|| !monitor_is_running(), Duration::from_secs(10));
     }
 
     #[cfg(not(target_os = "windows"))]
