@@ -282,7 +282,7 @@ function App() {
         <UndoRedoContext.Provider value={doIt}>
           <UnlockModal />
           <ConnectModal
-            open={!conn.conn}
+            open={!conn.conn && !showFirmwareUpdate}
             transports={TRANSPORTS}
             onTransportCreated={onConnect}
           />

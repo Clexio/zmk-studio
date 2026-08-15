@@ -21,6 +21,10 @@ const en = {
   licenseNotice: "License NOTICE",
   welcome: "Welcome to KeyPlayer Studio",
   selectDevice: "Select A Device:",
+  rescanPorts: "Rescan ports",
+  rescanning: "Scanning…",
+  noSerialFound:
+    "No keyboard serial port found. Make sure the keyboard is connected via USB, then click Rescan.",
   device: "Device",
   selectConnectionType: "Select a connection type.",
   browserNotSupportedPart1:
@@ -149,6 +153,9 @@ const zh: typeof en = {
   licenseNotice: "许可声明",
   welcome: "欢迎使用 KeyPlayer Studio",
   selectDevice: "选择设备：",
+  rescanPorts: "重新检测串口",
+  rescanning: "检测中…",
+  noSerialFound: "未检测到键盘串口，请确认键盘已通过 USB 连接后点击“重新检测串口”。",
   device: "设备",
   selectConnectionType: "选择连接方式：",
   browserNotSupportedPart1: "你的浏览器不受支持。KeyPlayer Studio 需要使用",

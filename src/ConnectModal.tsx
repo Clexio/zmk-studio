@@ -94,17 +94,21 @@ function deviceList(
       <div className="grid grid-cols-[1fr_auto]">
         <label>{t("selectDevice")}</label>
         <button
-          className="p-1 rounded hover:bg-base-300 disabled:bg-base-100 disabled:opacity-75"
+          className="flex items-center gap-1 px-2 py-1 rounded text-sm hover:bg-base-300 disabled:bg-base-100 disabled:opacity-75"
           disabled={refreshing}
           onClick={onRefresh}
         >
           <RefreshCw
-            className={`size-5 transition-transform ${
+            className={`size-4 transition-transform ${
               refreshing ? "animate-spin" : ""
             }`}
           />
+          {refreshing ? t("rescanning") : t("rescanPorts")}
         </button>
       </div>
+      {!refreshing && devices.length === 0 && (
+        <p className="text-xs opacity-70 pt-1">{t("noSerialFound")}</p>
+      )}
       <ListBox
         aria-label={t("device")}
         items={devices}
