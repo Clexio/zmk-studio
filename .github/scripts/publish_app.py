@@ -33,23 +33,24 @@ def main() -> int:
     bucket = oss2.Bucket(auth, endpoint, bucket_name)
 
     files = []
-    for name in sorted(os.listdir(src_dir)):
-        local = os.path.join(src_dir, name)
-        if not os.path.isfile(local):
-            continue
-        key = f"{prefix}/{platform}/{name}"
-        bucket.put_object_from_file(
-            key, local, headers={"x-oss-object-acl": "public-read"}
-        )
-        files.append(
-            {
-                "name": name,
-                "url": f"https://{bucket_name}.{endpoint.removeprefix('https://')}/{key}",
-                "sha256": sha256_of(local),
-                "size": os.path.getsize(local),
-            }
-        )
-        print(f"UPLOADED {key}")
+    # 产物内可能还有子目录（nsis/、msi/、dmg/ 等），递归上传并保留相对路径
+    for root, _dirs, fnames in os.walk(src_dir):
+        for name in sorted(fnames):
+            local = os.path.join(root, name)
+            rel = os.path.relpath(local, src_dir).replace(os.sep, "/")
+            key = f"{prefix}/{platform}/{rel}"
+            bucket.put_object_from_file(
+                key, local, headers={"x-oss-object-acl": "public-read"}
+            )
+            files.append(
+                {
+                    "name": rel,
+                    "url": f"https://{bucket_name}.{endpoint.removeprefix('https://')}/{key}",
+                    "sha256": sha256_of(local),
+                    "size": os.path.getsize(local),
+                }
+            )
+            print(f"UPLOADED {key}")
 
     if not files:
         print("No installer files found; aborting.")
