@@ -126,7 +126,7 @@ const en = {
   firmwareUpdateDoneHint:
     "If the keyboard does not reconnect automatically, select it again from the device list.",
   firmwareUpdateWarnings:
-    "Note: The update takes about 1-3 minutes. Do not close this window during the update; closing it may break existing features.\nNote: An unknown disk folder may pop up during the update; do not close it.\nNote: Bluetooth pairing information will be lost after the update. Power the keyboard off and on, remove the old pairing on both the computer and the keyboard, then pair again. Otherwise Bluetooth will not connect.",
+    "Note: Bluetooth pairing information will be lost after the update. Power the keyboard off and on, remove the old pairing on both the computer and the keyboard, then pair again. Otherwise Bluetooth will not connect.",
   monitorToggle: "Task Monitor",
   monitorToggleDesc: "One-click download/start/stop the task monitor",
   monitorOn: "On",
@@ -248,7 +248,7 @@ const zh: typeof en = {
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
   firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
   firmwareUpdateWarnings:
-    "注：版本更新耗时约1-3分钟，更新途中请勿关闭窗口，关闭窗口可能导致现有功能失效。\n注：更新时可能会弹出未知磁盘文件夹，请勿关闭。\n注：固件更新后蓝牙配对信息失效，请将键盘手动关机重启，并且删除设备端和键盘端的蓝牙配对信息，重新配对。否则蓝牙无法连接成功。",
+    "注：固件更新后蓝牙配对信息失效，请将键盘手动关机重启，并且删除设备端和键盘端的蓝牙配对信息，重新配对。否则蓝牙无法连接成功。",
   monitorToggle: "任务监控",
   monitorToggleDesc: "一键下载/启动/停止任务监控",
   monitorOn: "已打开",

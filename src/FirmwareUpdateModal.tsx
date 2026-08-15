@@ -235,7 +235,7 @@ export const FirmwareUpdateModal = ({
               <>
                 <p>{t("enteringBootloader")}</p>
                 {bootManual ? (
-                  <p className="text-xs opacity-80 whitespace-pre-line">
+                  <p className="text-lg opacity-90 whitespace-pre-line">
                     {t("bootloaderManualHint")}
                   </p>
                 ) : (
@@ -270,7 +270,7 @@ export const FirmwareUpdateModal = ({
               <p className="text-xs opacity-70 break-all">{errorDetail}</p>
             )}
             {errorKey === "noDrive" && (
-              <p className="text-xs opacity-80 whitespace-pre-line">
+              <p className="text-lg opacity-90 whitespace-pre-line">
                 {t("bootloaderManualHint")}
               </p>
             )}
