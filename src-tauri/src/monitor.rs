@@ -10,15 +10,42 @@ use std::time::Duration;
 
 const MONITOR_MANIFEST_URL: &str =
     "https://keyplayer.oss-cn-shanghai.aliyuncs.com/KeyPlayer/monitor/latest.json";
-const REQUIRED_FILES: [&str; 7] = [
-    "启动任务监控.vbs",
-    "启动任务监控.bat",
-    "停止任务监控.bat",
-    "watchdog.ps1",
-    "codex-monitor.ps1",
-    "ble-pusher.ps1",
-    "ble-status.ps1",
-];
+fn platform() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        "unsupported"
+    }
+}
+
+fn required_files(p: &str) -> &'static [&'static str] {
+    match p {
+        "windows" => &[
+            "启动任务监控.vbs",
+            "启动任务监控.bat",
+            "停止任务监控.bat",
+            "watchdog.ps1",
+            "codex-monitor.ps1",
+            "ble-pusher.ps1",
+            "ble-status.ps1",
+        ],
+        "macos" => &[
+            "keyplayer-monitor",
+            "install_launchagent.sh",
+            "uninstall_launchagent.sh",
+        ],
+        "linux" => &[
+            "keyplayer-monitor",
+            "install_linux.sh",
+            "uninstall_linux.sh",
+        ],
+        _ => &[],
+    }
+}
 
 #[derive(Serialize)]
 pub struct MonitorStatus {
@@ -62,7 +89,7 @@ fn package_installed() -> bool {
     if !dir.join("version.txt").exists() {
         return false;
     }
-    REQUIRED_FILES.iter().all(|f| dir.join(f).exists())
+    required_files(platform()).iter().all(|f| dir.join(f).exists())
 }
 
 fn monitor_is_running() -> bool {
@@ -115,13 +142,10 @@ pub fn status() -> MonitorStatus {
 
 #[tauri::command]
 pub async fn monitor_install() -> Result<MonitorStatus, String> {
-    let platform = if cfg!(target_os = "windows") {
-        "windows"
-    } else if cfg!(target_os = "macos") {
-        "macos"
-    } else {
+    let platform = platform();
+    if platform == "unsupported" {
         return Err("当前系统暂不支持任务监控".to_string());
-    };
+    }
 
     let text = crate::http_get_text(MONITOR_MANIFEST_URL.to_string())
         .await
@@ -199,6 +223,15 @@ fn stop_any_monitor_fallback() -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn run_sh(script: &Path) -> Result<(), String> {
+    std::process::Command::new("sh")
+        .arg(script)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn monitor_start() -> Result<MonitorStatus, String> {
     if !package_installed() {
@@ -237,11 +270,28 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
         wait_until(monitor_is_running, Duration::from_secs(15));
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        if cfg!(target_os = "macos") {
-            return Err("macOS 任务监控暂未开放一键启动（第二阶段）".to_string());
+        let sh = monitor_dir().join("install_launchagent.sh");
+        if sh.exists() {
+            run_sh(&sh)?;
         }
+        wait_until(monitor_is_running, Duration::from_secs(15));
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let sh = monitor_dir().join("install_linux.sh");
+        if sh.exists() {
+            run_sh(&sh)?;
+        }
+        if !monitor_is_running() {
+            let bin = monitor_dir().join("keyplayer-monitor");
+            if bin.exists() {
+                let _ = std::process::Command::new(&bin).spawn();
+            }
+        }
+        wait_until(monitor_is_running, Duration::from_secs(15));
     }
 
     Ok(status())
@@ -262,11 +312,22 @@ pub fn monitor_stop() -> Result<MonitorStatus, String> {
         wait_until(|| !monitor_is_running(), Duration::from_secs(10));
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        if cfg!(target_os = "macos") {
-            return Err("macOS 任务监控暂未开放一键停止（第二阶段）".to_string());
+        let sh = monitor_dir().join("uninstall_launchagent.sh");
+        if sh.exists() {
+            let _ = run_sh(&sh);
         }
+        wait_until(|| !monitor_is_running(), Duration::from_secs(10));
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let sh = monitor_dir().join("uninstall_linux.sh");
+        if sh.exists() {
+            let _ = run_sh(&sh);
+        }
+        wait_until(|| !monitor_is_running(), Duration::from_secs(10));
     }
 
     Ok(status())

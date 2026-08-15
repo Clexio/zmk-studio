@@ -83,17 +83,17 @@ export const AppHeader = ({
   );
 
   const isTauri = !!window.__TAURI_INTERNALS__;
-  // 任务监控一键开关：第一阶段仅 Windows 生效，macOS 第二阶段上线后再放开
-  const isWindowsMonitor = isTauri && navigator.userAgent.indexOf("Windows") >= 0;
+  // 任务监控一键开关：Windows / macOS / Linux 均支持
+  const isMonitorSupported = isTauri;
 
   useEffect(() => {
-    if (!isWindowsMonitor) {
+    if (!isMonitorSupported) {
       return;
     }
     monitorStatus()
       .then((s) => setMonitorState(s.running ? "on" : "off"))
       .catch(() => setMonitorState("off"));
-  }, [isWindowsMonitor]);
+  }, [isMonitorSupported]);
 
   const toggleMonitor = async () => {
     if (monitorState === "busy") {
@@ -177,7 +177,7 @@ export const AppHeader = ({
             {t("firmwareUpdate")}
           </Button>
         </Tooltip>
-        {isWindowsMonitor && (
+        {isMonitorSupported && (
           <Tooltip label={t("monitorToggleDesc")}>
             <Button
               className="flex items-center gap-1 px-2 py-1 rounded text-sm enabled:hover:bg-base-300 disabled:opacity-50"
@@ -201,7 +201,7 @@ export const AppHeader = ({
             </Button>
           </Tooltip>
         )}
-        {isWindowsMonitor && monitorError && (
+        {isMonitorSupported && monitorError && (
           <span className="text-xs text-red-500 max-w-40 truncate">
             {monitorError}
           </span>
