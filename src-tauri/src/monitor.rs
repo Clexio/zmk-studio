@@ -25,13 +25,16 @@ fn platform() -> &'static str {
 fn required_files(p: &str) -> &'static [&'static str] {
     match p {
         "windows" => &[
-            "启动任务监控.vbs",
-            "启动任务监控.bat",
-            "停止任务监控.bat",
+            "start-monitor.vbs",
+            "start-monitor.bat",
+            "stop-monitor.bat",
+            "enable-autostart.bat",
+            "install-startup.ps1",
             "watchdog.ps1",
             "codex-monitor.ps1",
             "ble-pusher.ps1",
             "ble-status.ps1",
+            "mic-wake-monitor.ps1",
         ],
         "macos" => &[
             "keyplayer-monitor",
@@ -204,9 +207,9 @@ fn run_hidden(bat: &Path) -> Result<(), String> {
 fn stop_any_monitor_fallback() -> Result<(), String> {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    // 与 停止任务监控.bat 等价的通用停止命令：
-    // 按命令行特征杀掉 codex-monitor / ble-pusher / watchdog / 启动VBS
-    let script = r#"Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='wscript.exe'" | Where-Object { $_.CommandLine -match 'codex-monitor|ble-pusher|watchdog|\.vbs' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"#;
+    // 与 stop-monitor.bat 等价的通用停止命令：
+    // 按命令行特征杀掉 codex-monitor / ble-pusher / watchdog / mic-wake-monitor / 启动VBS
+    let script = r#"Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='wscript.exe'" | Where-Object { $_.CommandLine -match 'codex-monitor|ble-pusher|watchdog|mic-wake-monitor|\.vbs' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"#;
     std::process::Command::new("powershell")
         .args([
             "-NoProfile",
@@ -256,13 +259,13 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
             })
             .unwrap_or_default();
         if !startup_done.exists() || !startup_lnk.exists() {
-            let startup_bat = dir.join("加入开机启动.bat");
+            let startup_bat = dir.join("enable-autostart.bat");
             if startup_bat.exists() {
                 run_hidden(&startup_bat)?;
             }
             let _ = std::fs::write(&startup_done, b"1");
         }
-        let start_bat = dir.join("启动任务监控.bat");
+        let start_bat = dir.join("start-monitor.bat");
         if start_bat.exists() {
             run_hidden(&start_bat)?;
         }
@@ -301,7 +304,7 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
 pub fn monitor_stop() -> Result<MonitorStatus, String> {
     #[cfg(target_os = "windows")]
     {
-        let stop_bat = monitor_dir().join("停止任务监控.bat");
+        let stop_bat = monitor_dir().join("stop-monitor.bat");
         if stop_bat.exists() {
             run_hidden(&stop_bat)?;
         } else {
