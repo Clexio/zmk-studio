@@ -123,7 +123,8 @@ const en = {
   monitorToggleDesc: "One-click download/start/stop the task monitor",
   monitorOn: "On",
   monitorOff: "Off",
-  monitorBusy: "Working…",
+  monitorStarting: "Starting monitor…",
+  monitorStopping: "Stopping monitor…",
 };
 
 const zh: typeof en = {
@@ -237,7 +238,8 @@ const zh: typeof en = {
   monitorToggleDesc: "一键下载/启动/停止任务监控",
   monitorOn: "已打开",
   monitorOff: "已关闭",
-  monitorBusy: "处理中…",
+  monitorStarting: "正在打开监控…",
+  monitorStopping: "正在关闭监控…",
 };
 
 export type TranslationKey = keyof typeof en;

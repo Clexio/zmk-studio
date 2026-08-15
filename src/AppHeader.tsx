@@ -54,6 +54,7 @@ export const AppHeader = ({
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
   const [monitorState, setMonitorState] = useState<"busy" | "on" | "off">("off");
+  const [monitorBusyAction, setMonitorBusyAction] = useState<"start" | "stop" | null>(null);
   const [monitorError, setMonitorError] = useState("");
   const { t } = useI18n();
   const theme = useTheme();
@@ -99,6 +100,7 @@ export const AppHeader = ({
       return;
     }
     setMonitorState("busy");
+    setMonitorBusyAction(monitorState === "on" ? "stop" : "start");
     setMonitorError("");
     try {
       const s =
@@ -114,6 +116,8 @@ export const AppHeader = ({
       } catch {
         setMonitorState("off");
       }
+    } finally {
+      setMonitorBusyAction(null);
     }
   };
 
@@ -187,7 +191,9 @@ export const AppHeader = ({
                 }
               >
                 {monitorState === "busy"
-                  ? t("monitorBusy")
+                  ? monitorBusyAction === "start"
+                    ? t("monitorStarting")
+                    : t("monitorStopping")
                   : monitorState === "on"
                     ? t("monitorOn")
                     : t("monitorOff")}
