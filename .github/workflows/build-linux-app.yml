@@ -1,0 +1,58 @@
+name: Build Linux App
+
+# 仅手动触发：确认稳定后可把 workflow_dispatch 改为 push 自动触发
+on:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+        with:
+          path: zmk-studio
+
+      - name: Checkout ts-client
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/zmk-studio-ts-client
+          path: zmk-studio-ts-client
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install ts-client deps
+        working-directory: zmk-studio-ts-client
+        run: npm install --ignore-scripts
+
+      - name: Install app deps
+        working-directory: zmk-studio
+        run: npm install --ignore-scripts
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build & bundle Linux app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: zmk-studio
+          args: --bundles deb appimage
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zmk-studio-linux-installer
+          path: |
+            zmk-studio/src-tauri/target/release/bundle/deb/*.deb
+            zmk-studio/src-tauri/target/release/bundle/appimage/*.AppImage
