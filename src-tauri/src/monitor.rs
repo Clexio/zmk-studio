@@ -10,6 +10,15 @@ use std::time::Duration;
 
 const MONITOR_MANIFEST_URL: &str =
     "https://keyplayer.oss-cn-shanghai.aliyuncs.com/KeyPlayer/monitor/latest.json";
+const REQUIRED_FILES: [&str; 7] = [
+    "启动任务监控.vbs",
+    "启动任务监控.bat",
+    "停止任务监控.bat",
+    "watchdog.ps1",
+    "codex-monitor.ps1",
+    "ble-pusher.ps1",
+    "ble-status.ps1",
+];
 
 #[derive(Serialize)]
 pub struct MonitorStatus {
@@ -44,6 +53,16 @@ fn monitor_dir() -> PathBuf {
         std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
     };
     PathBuf::from(base).join("KeyPlayerStudio").join("monitor")
+}
+
+/// 监控包是否完整（版本标记 + 关键文件都在）。
+/// 缺文件时视为未安装，启动前会重新下载，保证旧的不完整安装能自愈。
+fn package_installed() -> bool {
+    let dir = monitor_dir();
+    if !dir.join("version.txt").exists() {
+        return false;
+    }
+    REQUIRED_FILES.iter().all(|f| dir.join(f).exists())
 }
 
 fn monitor_is_running() -> bool {
@@ -182,15 +201,28 @@ fn stop_any_monitor_fallback() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn monitor_start() -> Result<MonitorStatus, String> {
-    if !monitor_dir().join("version.txt").exists() {
+    if !package_installed() {
         monitor_install().await?;
+        // 重新安装后需要重新注册开机自启
+        let _ = std::fs::remove_file(monitor_dir().join(".startup_done"));
     }
 
     #[cfg(target_os = "windows")]
     {
         let dir = monitor_dir();
         let startup_done = dir.join(".startup_done");
-        if !startup_done.exists() {
+        let startup_lnk = std::env::var("APPDATA")
+            .map(|a| {
+                PathBuf::from(a)
+                    .join("Microsoft")
+                    .join("Windows")
+                    .join("Start Menu")
+                    .join("Programs")
+                    .join("Startup")
+                    .join("CodexKeyboardMonitor.lnk")
+            })
+            .unwrap_or_default();
+        if !startup_done.exists() || !startup_lnk.exists() {
             let startup_bat = dir.join("加入开机启动.bat");
             if startup_bat.exists() {
                 run_hidden(&startup_bat)?;
