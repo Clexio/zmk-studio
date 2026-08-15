@@ -113,6 +113,10 @@ const en = {
   factoryDefault: "Factory default",
   bootloaderUsbHint:
     "The serial connection will drop after the keyboard reboots. This is normal. Keep the keyboard connected and wait...",
+  bootloaderAutoHint: "Sending reboot-to-bootloader command to the keyboard…",
+  bootloaderManualHint:
+    "If the firmware is too old to switch automatically:\n1. Hold the reset button and double-tap it (or press the key bound to &bootloader).\n2. Wait until a drive named NRFMicroBOOT appears.\n3. The update will continue automatically.",
+  retryDetect: "Re-check drive",
   stillMounted:
     "The bootloader drive is still mounted. The firmware write may have failed.",
   firmwareUpdateDoneHint:
@@ -230,6 +234,10 @@ const zh: typeof en = {
   factoryDefault: "出厂默认",
   bootloaderUsbHint:
     "键盘重启后串口断开属正常现象，请保持键盘连接，等待 U 盘弹出…",
+  bootloaderAutoHint: "正在向键盘发送重启到刷机模式指令…",
+  bootloaderManualHint:
+    "如果键盘固件较旧，无法自动进入刷机模式：\n1. 按住复位键快速双击（或按键盘上绑定 &bootloader 的按键）。\n2. 等待电脑出现 NRFMicroBOOT 磁盘。\n3. 出现后更新会自动继续。",
+  retryDetect: "重新检测磁盘",
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
   firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
   firmwareUpdateWarnings:

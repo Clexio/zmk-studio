@@ -77,6 +77,7 @@ export const FirmwareUpdateModal = ({
   const modalRef = useModalRef(open);
   const [phase, setPhase] = useState<Phase>("idle");
   const [step, setStep] = useState<UpdateStep>("bootloader");
+  const [bootManual, setBootManual] = useState(false);
   const [latest, setLatest] = useState<FirmwareManifest | null>(null);
   const [errorKey, setErrorKey] = useState<TranslationKey>("checkFailed");
   const [errorDetail, setErrorDetail] = useState("");
@@ -120,12 +121,16 @@ export const FirmwareUpdateModal = ({
     try {
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
       if (conn) {
-        call_rpc(conn, { core: { rebootToBootloader: true } }).catch(() => {});
+        const r = await call_rpc(conn, { core: { rebootToBootloader: true } });
+        setBootManual(r instanceof Error);
+      } else {
+        setBootManual(true);
       }
 
       // 2) 等待 NRFMicroBOOT 盘出现（最多 60 秒；也可手动双击复位键）
-      const drive = await waitForUf2Drive(60000);
+      const drive = await waitForUf2Drive(120000);
       if (!drive) {
+        setBootManual(true);
         throw new Error("noDrive");
       }
 
@@ -184,6 +189,7 @@ export const FirmwareUpdateModal = ({
       setLatest(null);
       setErrorKey("checkFailed");
       setErrorDetail("");
+      setBootManual(false);
     }
   }, [open, checkUpdates]);
 
@@ -221,9 +227,15 @@ export const FirmwareUpdateModal = ({
             {step === "bootloader" && (
               <>
                 <p>{t("enteringBootloader")}</p>
-                <p className="text-xs opacity-70">
-                  {t("bootloaderUsbHint")}
-                </p>
+                {bootManual ? (
+                  <p className="text-xs opacity-80 whitespace-pre-line">
+                    {t("bootloaderManualHint")}
+                  </p>
+                ) : (
+                  <p className="text-xs opacity-70">
+                    {t("bootloaderAutoHint")}
+                  </p>
+                )}
               </>
             )}
             {step === "downloading" && (
@@ -250,6 +262,11 @@ export const FirmwareUpdateModal = ({
             {errorDetail && (
               <p className="text-xs opacity-70 break-all">{errorDetail}</p>
             )}
+            {errorKey === "noDrive" && (
+              <p className="text-xs opacity-80 whitespace-pre-line">
+                {t("bootloaderManualHint")}
+              </p>
+            )}
           </>
         )}
 
@@ -258,6 +275,14 @@ export const FirmwareUpdateModal = ({
         </div>
 
         <div className="flex justify-end my-2 gap-3">
+          {phase === "error" && errorKey === "noDrive" && (
+            <button
+              className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
+              onClick={startUpdate}
+            >
+              {t("retryDetect")}
+            </button>
+          )}
           {phase === "result" && updateAvailable && (
             <button
               className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
