@@ -121,7 +121,14 @@ export const FirmwareUpdateModal = ({
     try {
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
       if (conn) {
-        const r = await call_rpc(conn, { core: { rebootToBootloader: true } });
+        // 串口可能因重启/拔线而断开，RPC 可能永不返回；
+        // 加 3 秒超时，保证流程一定能走到“等待刷机盘/重新检测”阶段
+        const r = await Promise.race([
+          call_rpc(conn, { core: { rebootToBootloader: true } }),
+          new Promise<Error>((resolve) =>
+            setTimeout(() => resolve(new Error("rpcTimeout")), 3000)
+          ),
+        ]);
         setBootManual(r instanceof Error);
       } else {
         setBootManual(true);
