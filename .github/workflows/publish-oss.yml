@@ -2,7 +2,7 @@ name: Publish installers to OSS
 
 on:
   workflow_run:
-    workflows: ["Build Windows App", "Build macOS App"]
+    workflows: ["Build Windows App", "Build macOS App", "Build Linux App"]
     types: [completed]
   workflow_dispatch:
 
@@ -37,8 +37,8 @@ jobs:
         run: |
           set -e
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            win_run=$(gh run list --repo ${{ github.repository }} --workflow "Build Windows App" --limit 1 --json databaseId --jq '.[0].databaseId')
-            mac_run=$(gh run list --repo ${{ github.repository }} --workflow "Build macOS App" --limit 1 --json databaseId --jq '.[0].databaseId')
+            win_run=$(gh run list --repo ${{ github.repository }} --workflow "Build Windows App" --status completed --limit 5 --json databaseId,conclusion --jq '[.[] | select(.conclusion=="success")][0].databaseId')
+            mac_run=$(gh run list --repo ${{ github.repository }} --workflow "Build macOS App" --status completed --limit 5 --json databaseId,conclusion --jq '[.[] | select(.conclusion=="success")][0].databaseId')
             if [ -n "$win_run" ] && [ "$win_run" != "null" ]; then
               gh run download "$win_run" --repo ${{ github.repository }} -n zmk-studio-windows-installer -D app_windows
               python .github/scripts/publish_app.py windows app_windows
@@ -46,6 +46,11 @@ jobs:
             if [ -n "$mac_run" ] && [ "$mac_run" != "null" ]; then
               gh run download "$mac_run" --repo ${{ github.repository }} -n zmk-studio-macos-installer -D app_macos
               python .github/scripts/publish_app.py macos app_macos
+            fi
+            linux_run=$(gh run list --repo ${{ github.repository }} --workflow "Build Linux App" --status completed --limit 5 --json databaseId,conclusion --jq '[.[] | select(.conclusion=="success")][0].databaseId')
+            if [ -n "$linux_run" ] && [ "$linux_run" != "null" ]; then
+              gh run download "$linux_run" --repo ${{ github.repository }} -n zmk-studio-linux-installer -D app_linux
+              python .github/scripts/publish_app.py linux app_linux
             fi
           else
             case "${{ github.event.workflow_run.name }}" in
@@ -56,6 +61,10 @@ jobs:
               "Build macOS App")
                 gh run download "${{ github.event.workflow_run.id }}" --repo ${{ github.repository }} -n zmk-studio-macos-installer -D app_macos
                 python .github/scripts/publish_app.py macos app_macos
+                ;;
+              "Build Linux App")
+                gh run download "${{ github.event.workflow_run.id }}" --repo ${{ github.repository }} -n zmk-studio-linux-installer -D app_linux
+                python .github/scripts/publish_app.py linux app_linux
                 ;;
             esac
           fi
