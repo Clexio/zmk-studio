@@ -12,6 +12,9 @@ use transport::commands::{transport_close, transport_send_data, ActiveConnection
 use transport::gatt::{gatt_connect, gatt_list_devices};
 use transport::serial::{serial_connect, serial_list_devices};
 
+mod monitor;
+use monitor::{monitor_install, monitor_start, monitor_status, monitor_stop};
+
 /// 枚举系统中可能挂载了 UF2 刷机盘的根路径。
 fn uf2_drive_candidates() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
@@ -116,6 +119,10 @@ fn main() {
             write_uf2_to_drive,
             http_get_text,
             http_get_bytes,
+            monitor_install,
+            monitor_status,
+            monitor_start,
+            monitor_stop,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

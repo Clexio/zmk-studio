@@ -27,6 +27,7 @@ tokio-serial = { version ="5.4.1", features = ["libudev"] }
 serialport = "4.5.0"
 tokio = { version = "1.37.0", features = ["io-util"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "charset"] }
+sha2 = "0.10"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

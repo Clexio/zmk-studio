@@ -23,6 +23,7 @@ import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { LanguagePicker, useI18n } from "./i18n";
 import { useTheme } from "./misc/useTheme";
+import { monitorStatus, monitorStart, monitorStop } from "./tauri/monitor";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -52,6 +53,8 @@ export const AppHeader = ({
   onOpenFirmwareUpdate,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
+  const [monitorState, setMonitorState] = useState<"busy" | "on" | "off">("off");
+  const [monitorError, setMonitorError] = useState("");
   const { t } = useI18n();
   const theme = useTheme();
 
@@ -77,6 +80,40 @@ export const AppHeader = ({
   useSub("rpc_notification.keymap.unsavedChangesStatusChanged", (unsaved) =>
     setUnsaved(unsaved)
   );
+
+  const isTauri = !!window.__TAURI_INTERNALS__;
+
+  useEffect(() => {
+    if (!isTauri) {
+      return;
+    }
+    monitorStatus()
+      .then((s) => setMonitorState(s.running ? "on" : "off"))
+      .catch(() => setMonitorState("off"));
+  }, [isTauri]);
+
+  const toggleMonitor = async () => {
+    if (monitorState === "busy") {
+      return;
+    }
+    setMonitorState("busy");
+    setMonitorError("");
+    try {
+      const s =
+        monitorState === "on"
+          ? await monitorStop()
+          : await monitorStart();
+      setMonitorState(s.running ? "on" : "off");
+    } catch (e) {
+      setMonitorError(String(e));
+      try {
+        const s = await monitorStatus();
+        setMonitorState(s.running ? "on" : "off");
+      } catch {
+        setMonitorState("off");
+      }
+    }
+  };
 
   return (
     <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
@@ -134,6 +171,33 @@ export const AppHeader = ({
             {t("firmwareUpdate")}
           </Button>
         </Tooltip>
+        {isTauri && (
+          <Tooltip label={t("monitorToggleDesc")}>
+            <Button
+              className="flex items-center gap-1 px-2 py-1 rounded text-sm enabled:hover:bg-base-300 disabled:opacity-50"
+              isDisabled={monitorState === "busy"}
+              onPress={toggleMonitor}
+            >
+              <span>{t("monitorToggle")}</span>
+              <span
+                className={
+                  monitorState === "on" ? "text-green-600" : "opacity-60"
+                }
+              >
+                {monitorState === "busy"
+                  ? t("monitorBusy")
+                  : monitorState === "on"
+                    ? t("monitorOn")
+                    : t("monitorOff")}
+              </span>
+            </Button>
+          </Tooltip>
+        )}
+        {isTauri && monitorError && (
+          <span className="text-xs text-red-500 max-w-40 truncate">
+            {monitorError}
+          </span>
+        )}
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
         <h2 className="my-2 text-lg">{t("restoreStockSettingsTitle")}</h2>
