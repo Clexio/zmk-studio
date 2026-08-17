@@ -67,44 +67,44 @@ export function encodeKeycode(
 // 固件出厂旋钮行为对应的左旋/右旋默认键值（按行为设备名/显示名匹配）
 const SENSOR_DEFAULT_KEYS: Record<string, { left: number; right: number }> = {
   volume_encoder: {
-    left: encodeKeycode("consumer", 0xe9, 0), // 左旋事件=param2(ccw)=音量+
-    right: encodeKeycode("consumer", 0xea, 0), // 右旋事件=param1(cw)=音量-
+    left: encodeKeycode("consumer", 0xea, 0), // 音量-（固件 cw=param1=左旋）
+    right: encodeKeycode("consumer", 0xe9, 0), // 音量+
   },
   brightness_encoder: {
-    left: encodeKeycode("consumer", 0x6f, 0), // 亮度+
-    right: encodeKeycode("consumer", 0x70, 0), // 亮度-
+    left: encodeKeycode("consumer", 0x70, 0), // 亮度-
+    right: encodeKeycode("consumer", 0x6f, 0), // 亮度+
   },
   paged_encoder: {
-    left: encodeKeycode("key", 0x4b, 0), // PageUp
-    right: encodeKeycode("key", 0x4e, 0), // PageDown
+    left: encodeKeycode("key", 0x4e, 0), // PageDown
+    right: encodeKeycode("key", 0x4b, 0), // PageUp
   },
   u_d_encoder: {
-    left: encodeKeycode("key", 0x51, 0), // Down
-    right: encodeKeycode("key", 0x52, 0), // Up
+    left: encodeKeycode("key", 0x52, 0), // Up
+    right: encodeKeycode("key", 0x51, 0), // Down
   },
   l_r_encoder: {
-    left: encodeKeycode("key", 0x4f, 0), // Right
-    right: encodeKeycode("key", 0x50, 0), // Left
+    left: encodeKeycode("key", 0x50, 0), // Left
+    right: encodeKeycode("key", 0x4f, 0), // Right
   },
   "音量": {
-    left: encodeKeycode("consumer", 0xe9, 0),
-    right: encodeKeycode("consumer", 0xea, 0),
+    left: encodeKeycode("consumer", 0xea, 0),
+    right: encodeKeycode("consumer", 0xe9, 0),
   },
   "亮度": {
-    left: encodeKeycode("consumer", 0x6f, 0),
-    right: encodeKeycode("consumer", 0x70, 0),
+    left: encodeKeycode("consumer", 0x70, 0),
+    right: encodeKeycode("consumer", 0x6f, 0),
   },
   "翻页": {
-    left: encodeKeycode("key", 0x4b, 0),
-    right: encodeKeycode("key", 0x4e, 0),
+    left: encodeKeycode("key", 0x4e, 0),
+    right: encodeKeycode("key", 0x4b, 0),
   },
   "上下方向": {
-    left: encodeKeycode("key", 0x51, 0),
-    right: encodeKeycode("key", 0x52, 0),
+    left: encodeKeycode("key", 0x52, 0),
+    right: encodeKeycode("key", 0x51, 0),
   },
   "左右方向": {
-    left: encodeKeycode("key", 0x4f, 0),
-    right: encodeKeycode("key", 0x50, 0),
+    left: encodeKeycode("key", 0x50, 0),
+    right: encodeKeycode("key", 0x4f, 0),
   },
 };
 
