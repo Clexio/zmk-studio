@@ -6,6 +6,7 @@ export type Language = "zh" | "en";
 const en = {
   appName: "KeyPlayer Studio",
   connectFailed: "Failed to connect to the chosen device",
+  notConnected: "Not connected",
   restoreStockSettings: "Restore Stock Settings",
   restoreStockSettingsTitle: "Restore Stock Settings",
   restoreStockSettingsDesc:
@@ -17,10 +18,11 @@ const en = {
   redo: "Redo",
   save: "Save",
   discard: "Discard",
+  unsavedChanges: "Unsaved changes",
   aboutZmkStudio: "About KeyPlayer Studio",
   licenseNotice: "License NOTICE",
   welcome: "Welcome to KeyPlayer Studio",
-  selectDevice: "Select A Device:",
+  selectDevice: "Select a device:",
   rescanPorts: "Rescan ports",
   rescanning: "Scanning…",
   noSerialFound:
@@ -52,6 +54,7 @@ const en = {
   layers: "Layers",
   newLayerName: "New Layer Name",
   keymapLayerAria: "Keymap Layer",
+  renameLayer: "Rename layer",
   keyName: "Key Naming",
   keyNamePlaceholder: "e.g. Up",
   behavior: "Behavior:",
@@ -91,7 +94,8 @@ const en = {
   seeGithubReleases: "See GitHub Releases →",
   licenseText:
     "ZMK Studio is released under the open source Apache 2.0 license. A copy of the NOTICE file from the ZMK Studio repository is included here:",
-  someComposite: "Some composite?",
+  someComposite:
+    "This behavior uses composite parameters that cannot be edited here.",
   layerNameLabel: "Layer Name",
   firmwareUpdate: "Firmware Update",
   currentVersion: "Current version",
@@ -142,6 +146,7 @@ const en = {
 const zh: typeof en = {
   appName: "KeyPlayer Studio",
   connectFailed: "无法连接到所选设备",
+  notConnected: "未连接",
   restoreStockSettings: "恢复出厂设置",
   restoreStockSettingsTitle: "恢复出厂设置",
   restoreStockSettingsDesc:
@@ -153,6 +158,7 @@ const zh: typeof en = {
   redo: "重做",
   save: "保存",
   discard: "放弃更改",
+  unsavedChanges: "有未保存的更改",
   aboutZmkStudio: "关于 KeyPlayer Studio",
   licenseNotice: "许可声明",
   welcome: "欢迎使用 KeyPlayer Studio",
@@ -184,6 +190,7 @@ const zh: typeof en = {
   layers: "层",
   newLayerName: "新层名",
   keymapLayerAria: "键位层",
+  renameLayer: "重命名层",
   keyName: "按键命名",
   keyNamePlaceholder: "如：上移",
   behavior: "行为：",
@@ -223,7 +230,7 @@ const zh: typeof en = {
   seeGithubReleases: "查看 GitHub Releases →",
   licenseText:
     "ZMK Studio 以开源 Apache 2.0 许可证发布。这里包含来自 ZMK Studio 仓库的 NOTICE 文件副本：",
-  someComposite: "复合参数？",
+  someComposite: "该行为使用了复合参数，暂不支持在此编辑。",
   layerNameLabel: "层名",
   firmwareUpdate: "固件更新",
   currentVersion: "当前版本",

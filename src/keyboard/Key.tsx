@@ -50,7 +50,7 @@ export const Key = ({
 
   return (
     <button
-      className={`group relative flex justify-center items-center cursor-pointer transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-125 ${knob ? "rounded-full ring-2 ring-primary/40" : "rounded"} ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
+      className={`group relative flex justify-center items-center cursor-pointer transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-125 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${knob ? "rounded-full ring-2 ring-primary/40" : "rounded"} ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
         }`}
       style={{
         width: `${pixelWidth}px`,
@@ -58,7 +58,7 @@ export const Key = ({
       }}
       onClick={onClick}
     >
-      <div className={`absolute ${selected ? "text-primary-content" : "z1text-base-content"} opacity-80 top-0.5 text-nowrap left-1/2 font-light -translate-x-1/2 text-center text-[10px]`}>
+      <div className={`absolute ${selected ? "text-primary-content" : "z-10 text-base-content"} opacity-80 top-0.5 text-nowrap left-1/2 font-light -translate-x-1/2 text-center text-[10px]`}>
         {typeof header === "string" ? shortenHeader(header) : header}
       </div>
       {children}

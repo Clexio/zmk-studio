@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { GenericModal } from "../GenericModal";
 import { useModalRef } from "../misc/useModalRef";
 import { useI18n } from "../i18n";
+import { X } from "lucide-react";
 
 interface DailyPayload {
   daily?: number;
@@ -101,7 +102,7 @@ export const DailyTokenUsage = () => {
         onClick={() => setOpen(true)}
       >
         <span className="text-sm">{t("dailyTokens")}</span>
-        <span className="ml-2 text-sm">{daily === null ? "—" : daily.toLocaleString()}</span>
+        <span className="ml-2 text-sm">{daily === null ? "-" : daily.toLocaleString()}</span>
       </button>
       <GenericModal ref={modalRef} onClose={close} className="w-[36rem] max-w-[92vw]">
         <div className="flex flex-col gap-3">
@@ -118,7 +119,7 @@ export const DailyTokenUsage = () => {
               className="text-sm hover:bg-base-300 rounded px-1"
               onClick={close}
             >
-              ✕
+              <X className="size-4" />
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 text-center text-xs">
@@ -142,7 +143,7 @@ export const DailyTokenUsage = () => {
                 >
                   <span className="text-sm">{day ?? ""}</span>
                   <span className="text-[10px] leading-tight">
-                    {day !== null ? (value ? formatTokens(value) : "—") : ""}
+                    {day !== null ? (value ? formatTokens(value) : "-") : ""}
                   </span>
                 </div>
               );

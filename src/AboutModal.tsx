@@ -195,7 +195,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
           </ExternalLink>
         </p>
         <button
-          className="p-1.5 rounded-md bg-gray-100 text-black hover:bg-gray-300"
+          className="p-1.5 rounded-md bg-base-200 text-base-content hover:bg-base-300"
           onClick={onClose}
         >
           {t("close")}
@@ -214,7 +214,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 
           return (
             <React.Fragment key={s.level}>
-              <label>{s.level}</label>
+              <span>{s.level}</span>
               <div
                 className={`grid grid-rows-1 gap-x-1 auto-cols-fr grid-flow-col justify-items-center items-center ${
                   heightVariants[s.size]
@@ -228,8 +228,8 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
                   };
 
                   return (
-                    <a key={v.name} href={v.url} target="_blank">
-                      <picture aria-label={v.name}>
+                    <a key={v.name} href={v.url} target="_blank" rel="noreferrer">
+                      <picture>
                         {v.darkModeImg && (
                           <source
                             className={maxSizeVariants[s.size]}
@@ -237,7 +237,11 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
                             media="(prefers-color-scheme: dark)"
                           />
                         )}
-                        <img className={maxSizeVariants[s.size]} src={v.img} />
+                        <img
+                          className={maxSizeVariants[s.size]}
+                          src={v.img}
+                          alt={v.name}
+                        />
                       </picture>
                     </a>
                   );

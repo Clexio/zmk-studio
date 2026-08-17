@@ -116,21 +116,25 @@ export const Download = () => {
   }, []);
 
   return (
-    <div className="bg-base-200 dark:bg-base-300 text-base-content min-h-full w-full flex flex-col justify-center items-center p-10 pb-48">
+    <div className="bg-base-200 text-base-content min-h-full w-full flex flex-col justify-center items-center p-10 pb-48">
       <img src="/logo.png" alt="KeyPlayer" className="w-48 rounded-2xl" />
       <div className="text-3xl mb-1">KeyPlayer Studio</div>
       <div className="text-md mb-1 opacity-70">
         {ReleaseVersion}
       </div>
-      <div className="bg-base-100 p-8 max-w-md w-full m-2 rounded-lg shadow-lg dark:shadow-xl">
+      <div className="bg-base-100 p-8 max-w-md w-full m-2 rounded-lg shadow-lg">
         {PlatformLinks[platform].length > 0 && (
           <>
             <div className="flex flex-col gap-3 mb-3">
-              {PlatformLinks[platform].map((link) => (
+              {PlatformLinks[platform].map((link, i) => (
                 <a
                   key={link.name}
                   href={getUrlFromPattern(ReleaseAssets, link.urlPattern)}
-                  className="p-3 text-lg bg-primary hover:opacity-85 active:opacity-70 text-primary-content rounded-lg justify-center items-center gap-3 flex"
+                  className={`p-3 text-lg rounded-lg justify-center items-center gap-3 flex ${
+                    i === 0
+                      ? "bg-primary hover:opacity-85 active:opacity-70 text-primary-content"
+                      : "bg-base-100 border border-base-300 text-base-content hover:bg-base-200"
+                  }`}
                 >
                   <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6"/>{" "}
                   {t("downloadFor")} {link.name}

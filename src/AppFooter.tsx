@@ -10,9 +10,13 @@ export const AppFooter = ({ onShowLicenseNotice }: AppFooterProps) => {
     <div className="grid justify-center p-1 bg-base-200">
       <div>
         <span>&copy; 2026 - Improved based on ZMK</span> -{" "}
-        <a className="hover:text-primary hover:cursor-pointer" onClick={onShowLicenseNotice}>
+        <button
+          type="button"
+          className="hover:text-primary hover:cursor-pointer hover:underline"
+          onClick={onShowLicenseNotice}
+        >
           {t("licenseNotice")}
-        </a>
+        </button>
       </div>
     </div>
   );

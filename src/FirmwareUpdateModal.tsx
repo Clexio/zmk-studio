@@ -168,6 +168,7 @@ export const FirmwareUpdateModal = ({
         // 此时写入可能报“设备断开”，但烧录实际已经完成，属正常现象。
         console.warn("UF2 write reported an error (drive may have reset):", e);
       }
+      setStep("rebooting");
       const driveGone = await waitForUf2DriveGone(30000);
       if (!driveGone) {
         throw new Error("stillMounted");
@@ -277,14 +278,14 @@ export const FirmwareUpdateModal = ({
           </>
         )}
 
-        <div className="text-sm bg-gray-200 rounded p-2 whitespace-pre-line">
+        <div className="text-sm bg-base-200 border border-base-300 rounded p-2 whitespace-pre-line">
           {t("firmwareUpdateWarnings")}
         </div>
 
         <div className="flex justify-end my-2 gap-3">
           {phase === "error" && errorKey === "noDrive" && (
             <button
-              className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
+              className="rounded bg-primary text-primary-content hover:opacity-90 px-3 py-2"
               onClick={startUpdate}
             >
               {t("retryDetect")}
@@ -292,7 +293,7 @@ export const FirmwareUpdateModal = ({
           )}
           {phase === "result" && updateAvailable && (
             <button
-              className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
+              className="rounded bg-primary text-primary-content hover:opacity-90 px-3 py-2"
               onClick={startUpdate}
             >
               {t("updateNow")}
@@ -315,7 +316,8 @@ export const FirmwareUpdateModal = ({
             </button>
           )}
           <button
-            className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
+            className="rounded bg-base-200 hover:bg-base-300 px-3 py-2 disabled:opacity-40"
+            disabled={phase === "updating"}
             onClick={onClose}
           >
             {t("close")}

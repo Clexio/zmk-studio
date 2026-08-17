@@ -13,11 +13,12 @@ export function useModalRef(
   };
 
   useEffect(() => {
+    const onCancel = () => reopen();
     if (open) {
       if (ref.current && !ref.current?.open) {
         ref.current?.showModal();
         if (allowCancel !== undefined && !allowCancel) {
-          ref.current?.addEventListener("cancel", reopen);
+          ref.current?.addEventListener("cancel", onCancel);
         }
       }
       if (closeOnOutsideClick) {
@@ -40,12 +41,19 @@ export function useModalRef(
         document.addEventListener("mousedown", handleClickOutside);
         return () => {
           document.removeEventListener("mousedown", handleClickOutside);
+          ref.current?.removeEventListener("cancel", onCancel);
         };
       }
+      return () => {
+        ref.current?.removeEventListener("cancel", onCancel);
+      };
     } else {
       ref.current?.close();
-      ref.current?.removeEventListener("cancel", reopen);
+      ref.current?.removeEventListener("cancel", onCancel);
     }
+    return () => {
+      ref.current?.removeEventListener("cancel", onCancel);
+    };
   }, [open, closeOnOutsideClick]);
 
   return ref;

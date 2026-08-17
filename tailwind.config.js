@@ -6,21 +6,20 @@ export default {
   content: ["./index.html", "./download.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     fontSize: {
-      xs: "0.4rem",
+      xs: "0.75rem",
     },
     extend: {
       fontFamily: {
         sans: ["Inter", "system-ui"],
       },
       colors: {
-        primary:
-          "light-dark(oklch(49.12% 0.3096 285.75), oklch(65.69% 0.196 285.75))",
-        "primary-content":
-          "light-dark(oklch(0.89824 0.06192 285.75), oklch(0.13138 0.0392 285.75))",
-        secondary:
-          "light-dark(oklch(69.71% 0.329 342.55), oklch(74.8% 0.26 342.55))",
-        accent:
-          "light-dark(oklch(76.76% 0.184 183.61), oklch(74.51% 0.167 183.61))",
+        // Brand colors extracted from the KeyPlayer logo (logo.png):
+        // deep blue #2b59a7 is the primary accent; amber #f5b51c and
+        // red #de2b2d are reserved for warning/error semantics.
+        primary: "light-dark(#2b59a7, #6f9be0)",
+        "primary-content": "light-dark(#ffffff, #0d1b33)",
+        secondary: "light-dark(#2b59a7, #6f9be0)",
+        accent: "light-dark(#2b59a7, #6f9be0)",
         "base-content": "light-dark(#1f2937, #A6ADBB)",
         "base-100": "light-dark(oklch(100% 0 0), #1d232a)",
         "base-200": "light-dark(#F2F2F2, #191e24)",

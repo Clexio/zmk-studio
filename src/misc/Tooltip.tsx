@@ -7,7 +7,7 @@ export interface TooltipProps {
 
 export const Tooltip = ({ children, label }: TooltipProps) => {
   return (
-    <TooltipTrigger delay={1000} closeDelay={500}>
+    <TooltipTrigger delay={400} closeDelay={300}>
       {children}
       <AriaTooltip offset={5} className="bg-base-200 text-base-content px-2 py-1 rounded shadow-md">
         {label}

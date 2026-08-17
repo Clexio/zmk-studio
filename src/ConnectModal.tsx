@@ -10,6 +10,7 @@ import { ExternalLink } from "./misc/ExternalLink";
 import { GenericModal } from "./GenericModal";
 import { useI18n } from "./i18n";
 import type { I18nTranslate } from "./i18n";
+import { useToast } from "./misc/Toast";
 
 export type TransportFactory = {
   label: string;
@@ -38,25 +39,35 @@ function deviceList(
   >([]);
   const [selectedDev, setSelectedDev] = useState(new Set<Key>());
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   async function LoadEm() {
     setRefreshing(true);
-    let entries: Array<[TransportFactory, AvailableDevice]> = [];
-    for (const t of transports.filter((t) => t.pick_and_connect)) {
-      const devices = await t.pick_and_connect?.list();
-      if (!devices) {
-        continue;
+    setLoadError(null);
+    try {
+      let entries: Array<[TransportFactory, AvailableDevice]> = [];
+      for (const t of transports.filter((t) => t.pick_and_connect)) {
+        const devices = await t.pick_and_connect?.list();
+        if (!devices) {
+          continue;
+        }
+
+        entries.push(
+          ...devices.map<[TransportFactory, AvailableDevice]>((d) => {
+            return [t, d];
+          })
+        );
       }
 
-      entries.push(
-        ...devices.map<[TransportFactory, AvailableDevice]>((d) => {
-          return [t, d];
-        })
-      );
+      setDevices(entries);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setLoadError(message);
+      showToast(message, "error");
+    } finally {
+      setRefreshing(false);
     }
-
-    setDevices(entries);
-    setRefreshing(false);
   }
 
   useEffect(() => {
@@ -83,7 +94,9 @@ function deviceList(
         dev[0]
           .pick_and_connect!.connect(dev[1])
           .then(onTransportCreated)
-          .catch((e) => alert(e));
+          .catch((e) =>
+            showToast(e instanceof Error ? e.message : String(e), "error")
+          );
       }
     },
     [devices, onTransportCreated]
@@ -108,6 +121,11 @@ function deviceList(
       </div>
       {!refreshing && devices.length === 0 && (
         <p className="text-xs opacity-70 pt-1">{t("noSerialFound")}</p>
+      )}
+      {loadError && (
+        <p className="text-xs text-red-500 pt-1" role="alert">
+          {loadError}
+        </p>
       )}
       <ListBox
         aria-label={t("device")}
@@ -139,6 +157,7 @@ function simpleDevicePicker(
   onTransportCreated: (t: RpcTransport) => void,
   t: I18nTranslate
 ) {
+  const { showToast } = useToast();
   const [availableDevices, setAvailableDevices] = useState<
     AvailableDevice[] | undefined
   >(undefined);
@@ -169,7 +188,7 @@ function simpleDevicePicker(
           if (!ignore) {
             console.error(e);
             if (e instanceof Error && !(e instanceof UserCancelledError)) {
-              alert(e.message);
+              showToast(e.message, "error");
             }
             setSelectedTransport(undefined);
           }
@@ -212,17 +231,19 @@ function simpleDevicePicker(
       {selectedTransport && availableDevices && (
         <ul>
           {availableDevices.map((d) => (
-            <li
-              key={d.id}
-              className="m-1 p-1"
-              onClick={async () => {
-                onTransportCreated(
-                  await selectedTransport!.pick_and_connect!.connect(d)
-                );
-                setSelectedTransport(undefined);
-              }}
-            >
-              {d.label}
+            <li key={d.id} className="m-1">
+              <button
+                type="button"
+                className="w-full text-left p-1 rounded hover:bg-base-300"
+                onClick={async () => {
+                  onTransportCreated(
+                    await selectedTransport!.pick_and_connect!.connect(d)
+                  );
+                  setSelectedTransport(undefined);
+                }}
+              >
+                {d.label}
+              </button>
             </li>
           ))}
         </ul>

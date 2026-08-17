@@ -180,7 +180,7 @@ export function SearchableKeyDropdown({
           <ChevronDown className="size-4" />
         </Button>
       </div>
-      <Popover className="w-[var(--trigger-width)] max-h-4 shadow-md text-base-content rounded border-base-content bg-base-100">
+      <Popover className="w-[var(--trigger-width)] max-h-96 shadow-md text-base-content rounded border-base-content bg-base-100">
         <ListBox
           items={options}
           className="block max-h-[30vh] overflow-auto p-1"
@@ -273,7 +273,7 @@ export function GroupedKeyDropdown({
           <ChevronDown className="size-4" />
         </Button>
       </div>
-      <Popover className="w-[var(--trigger-width)] max-h-4 shadow-md text-base-content rounded border-base-content bg-base-100">
+      <Popover className="w-[var(--trigger-width)] max-h-96 shadow-md text-base-content rounded border-base-content bg-base-100">
         <ListBox
           items={items}
           className="block max-h-[30vh] overflow-auto p-1"

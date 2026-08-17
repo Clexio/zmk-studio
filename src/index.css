@@ -24,5 +24,21 @@ body {
   min-width: 320px;
 
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
+}
+
+:focus-visible {
+  outline: 2px solid light-dark(#2b59a7, #6f9be0);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

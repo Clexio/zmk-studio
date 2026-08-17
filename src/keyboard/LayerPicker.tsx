@@ -75,8 +75,11 @@ const EditLabelModal = ({
       onClose={onClose}
       className="min-w-min w-[30vw] flex flex-col"
     >
-      <span className="mb-3 text-lg">{t("newLayerName")}</span>
+      <label htmlFor="layer-name-input" className="mb-3 text-lg">
+        {t("newLayerName")}
+      </label>
       <input
+        id="layer-name-input"
         className="p-1 border rounded border-base-content border-solid"
         type="text"
         maxLength={maxLayerNameLength || 30}
@@ -91,11 +94,15 @@ const EditLabelModal = ({
         }}
       />
       <div className="mt-4 flex justify-end">
-        <button className="py-1.5 px-2" type="button" onClick={onClose}>
+        <button
+          className="py-1.5 px-2 rounded-md bg-base-200 hover:bg-base-300"
+          type="button"
+          onClick={onClose}
+        >
           {t("cancel")}
         </button>
         <button
-          className="py-1.5 px-2 ml-4 rounded-md bg-gray-100 text-black hover:bg-gray-300"
+          className="py-1.5 px-2 ml-4 rounded-md bg-primary text-primary-content hover:opacity-90"
           type="button"
           onClick={() => {
             handleSave();
@@ -180,7 +187,7 @@ export const LayerPicker = ({
         {onRemoveClicked && (
           <button
             type="button"
-            className="hover:text-primary-content hover:bg-primary rounded-sm"
+            className="hover:text-primary-content hover:bg-primary rounded-sm disabled:text-base-content/40"
             disabled={!canRemove}
             onClick={onRemoveClicked}
           >
@@ -191,7 +198,7 @@ export const LayerPicker = ({
           <button
             type="button"
             disabled={!canAdd}
-            className="hover:text-primary-content ml-1 hover:bg-primary rounded-sm disabled:text-gray-500 disabled:hover:bg-base-300 disabled:cursor-not-allowed"
+            className="hover:text-primary-content ml-1 hover:bg-primary rounded-sm disabled:text-base-content/40 disabled:hover:bg-base-300 disabled:cursor-not-allowed"
             onClick={onAddClicked}
           >
             <Plus className="size-4" />
@@ -225,15 +232,19 @@ export const LayerPicker = ({
         {(layer_item) => (
           <ListBoxItem
             textValue={layer_item.name}
-            className="p-1 b-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300"
+            className="p-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300"
           >
             <span>{layer_item.name}</span>
-            <Pencil
-              className="h-4 w-4 mx-1 invisible group-hover:visible"
+            <button
+              type="button"
+              aria-label={t("renameLayer")}
+              className="opacity-40 hover:opacity-100 focus-visible:opacity-100 transition-opacity"
               onClick={() =>
                 setEditLabelData({ id: layer_item.id, name: layer_item.name })
               }
-            />
+            >
+              <Pencil className="h-4 w-4 mx-1" />
+            </button>
           </ListBoxItem>
         )}
       </ListBox>

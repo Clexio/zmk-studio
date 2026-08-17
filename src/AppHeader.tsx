@@ -138,10 +138,12 @@ export const AppHeader = ({
       <div className="flex items-center gap-2">
         <MenuTrigger>
           <Button
-            className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg flex items-center gap-1 max-w-52"
+            className="text-center rac-disabled:opacity-60 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg flex items-center gap-1 max-w-52"
             isDisabled={!connectedDeviceLabel}
           >
-            <span className="truncate">{connectedDeviceLabel}</span>
+            <span className="truncate">
+              {connectedDeviceLabel ?? t("notConnected")}
+            </span>
             <ChevronDown className="inline-block w-4 shrink-0" />
           </Button>
           <Popover>
@@ -202,7 +204,10 @@ export const AppHeader = ({
           </Tooltip>
         )}
         {isMonitorSupported && monitorError && (
-          <span className="text-xs text-red-500 max-w-40 truncate">
+          <span
+            className="text-xs text-red-500 max-w-40 truncate"
+            title={monitorError}
+          >
             {monitorError}
           </span>
         )}
@@ -257,11 +262,17 @@ export const AppHeader = ({
         )}
         <Tooltip label={t("save")}>
           <Button
-            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+            className="relative flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             isDisabled={!unsaved}
             onPress={onSave}
           >
             <Save className="inline-block w-4 mx-1" aria-label={t("save")} />
+            {unsaved && (
+              <span
+                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500"
+                aria-label={t("unsavedChanges")}
+              />
+            )}
           </Button>
         </Tooltip>
         <Tooltip label={t("discard")}>

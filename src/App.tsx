@@ -24,6 +24,8 @@ import { valueAfter } from "./misc/async";
 import { AppFooter } from "./AppFooter";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
 import { FirmwareUpdateModal } from "./FirmwareUpdateModal";
+import { useI18n } from "./i18n";
+import { useToast } from "./misc/Toast";
 
 declare global {
   interface Window {
@@ -107,7 +109,8 @@ async function connect(
   setConn: Dispatch<ConnectionState>,
   setConnectedDeviceName: Dispatch<string | undefined>,
   setConnectedFirmwareVersion: Dispatch<string | undefined>,
-  signal: AbortSignal
+  signal: AbortSignal,
+  onError: () => void
 ) {
   let conn = await create_rpc_connection(transport, { signal });
 
@@ -122,13 +125,7 @@ async function connect(
   ]);
 
   if (!details) {
-    // TODO: Show a proper toast/alert not using `window.alert`
-    window.alert(
-      // 语言选择位于页面顶部，连接失败提示跟随当前语言
-      document.documentElement.lang === "zh"
-        ? "无法连接到所选设备"
-        : "Failed to connect to the chosen device"
-    );
+    onError();
     return;
   }
 
@@ -148,6 +145,8 @@ async function connect(
 }
 
 function App() {
+  const { t } = useI18n();
+  const { showToast } = useToast();
   const [conn, setConn] = useState<ConnectionState>({ conn: null });
   const [connectedDeviceName, setConnectedDeviceName] = useState<
     string | undefined
@@ -262,15 +261,16 @@ function App() {
   }, [conn]);
 
   const onConnect = useCallback(
-    (t: RpcTransport) => {
+    (transport: RpcTransport) => {
       const ac = new AbortController();
       setConnectionAbort(ac);
       connect(
-        t,
+        transport,
         setConn,
         setConnectedDeviceName,
         setConnectedFirmwareVersion,
-        ac.signal
+        ac.signal,
+        () => showToast(t("connectFailed"), "error")
       );
     },
     [setConn, setConnectedDeviceName, setConnectedFirmwareVersion]
@@ -297,7 +297,7 @@ function App() {
             currentVersion={connectedFirmwareVersion}
             onUpdated={(v) => setConnectedFirmwareVersion(v)}
           />
-          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
+          <div className="bg-base-100 text-base-content h-full max-h-[100dvh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
             <AppHeader
               connectedDeviceLabel={connectedDeviceName}
               firmwareVersion={connectedFirmwareVersion}
