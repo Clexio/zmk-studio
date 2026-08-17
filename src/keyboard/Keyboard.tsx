@@ -17,6 +17,7 @@ import {
   SetLayerPropsResponse,
   SetLayerKeyNameResponse,
   SetLayerSensorBindingResponse,
+  SetKnobSensitivityResponse,
   BehaviorBinding,
   Layer,
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
@@ -106,6 +107,77 @@ function useBehaviors(): BehaviorMap {
   }, [connection, lockState]);
 
   return behaviors;
+}
+
+function useKnobSensitivity(): {
+  sensitivities: number[] | undefined;
+  supported: boolean;
+  setSensitivities: React.Dispatch<SetStateAction<number[] | undefined>>;
+  setSensitivity: (layerId: number, value: number) => Promise<boolean>;
+} {
+  let connection = useContext(ConnectionContext);
+  let lockState = useContext(LockStateContext);
+
+  const [sensitivities, setSensitivities] = useState<
+    number[] | undefined
+  >(undefined);
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    if (
+      !connection.conn ||
+      lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
+    ) {
+      setSensitivities(undefined);
+      setSupported(false);
+      return;
+    }
+
+    let ignore = false;
+
+    async function startRequest() {
+      if (!connection.conn) {
+        return;
+      }
+      const resp = await call_rpc(connection.conn, {
+        keymap: { getKnobSensitivity: {} },
+      });
+      if (ignore) {
+        return;
+      }
+      const vals = resp.keymap?.getKnobSensitivity?.sensitivities;
+      if (vals && vals.length > 0) {
+        setSensitivities(vals);
+        setSupported(true);
+      } else {
+        setSupported(false);
+      }
+    }
+
+    startRequest();
+
+    return () => {
+      ignore = true;
+    };
+  }, [connection, lockState]);
+
+  const setSensitivity = useCallback(
+    async (layerId: number, value: number) => {
+      if (!connection.conn) {
+        return false;
+      }
+      const resp = await call_rpc(connection.conn, {
+        keymap: { setKnobSensitivity: { layerId, sensitivity: value } },
+      });
+      return (
+        resp.keymap?.setKnobSensitivity ===
+        SetKnobSensitivityResponse.SET_KNOB_SENSITIVITY_RESP_OK
+      );
+    },
+    [connection]
+  );
+
+  return { sensitivities, supported, setSensitivities, setSensitivity };
 }
 
 function useLayouts(): [
@@ -230,6 +302,7 @@ export default function Keyboard() {
     number | undefined
   >(undefined);
   const behaviors = useBehaviors();
+  const knobSensitivity = useKnobSensitivity();
 
   const knobPositions = useMemo(() => {
     if (keymap?.sensorPositions?.length) {
@@ -916,31 +989,80 @@ export default function Keyboard() {
                         <EventValuePicker
                           label={t("knobLeftEvent")}
                           value={isCustom ? sensorBinding.param1 : 0}
-                          fallbackKeycode={leftDefault}
+                          fallbackKeycode={isCustom ? undefined : leftDefault}
                           onValueChange={(v) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId!,
                               param1: v,
                               param2: isCustom
                                 ? sensorBinding.param2
-                                : 0,
+                                : (rightDefault ?? 0),
                             })
                           }
                         />
                         <EventValuePicker
                           label={t("knobRightEvent")}
                           value={isCustom ? sensorBinding.param2 : 0}
-                          fallbackKeycode={rightDefault}
+                          fallbackKeycode={isCustom ? undefined : rightDefault}
                           onValueChange={(v) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId!,
                               param1: isCustom
                                 ? sensorBinding.param1
-                                : 0,
+                                : (leftDefault ?? 0),
                               param2: v,
                             })
                           }
                         />
+                        {knobSensitivity.supported ? (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-sm">
+                              {t("knobSensitivity")}
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="range"
+                                min={1}
+                                max={10}
+                                step={1}
+                                className="flex-1"
+                                value={
+                                  knobSensitivity.sensitivities?.[
+                                    keymap.layers[selectedLayerIndex].id
+                                  ] ?? 1
+                                }
+                                onChange={(e) => {
+                                  const layerId =
+                                    keymap.layers[selectedLayerIndex].id;
+                                  const v = Number(e.target.value);
+                                  knobSensitivity.setSensitivities((prev) => {
+                                    if (!prev) {
+                                      return prev;
+                                    }
+                                    const next = [...prev];
+                                    next[layerId] = v;
+                                    return next;
+                                  });
+                                  knobSensitivity.setSensitivity(layerId, v);
+                                }}
+                              />
+                              <span className="text-sm w-8 text-right">
+                                {
+                                  knobSensitivity.sensitivities?.[
+                                    keymap.layers[selectedLayerIndex].id
+                                  ] ?? 1
+                                }
+                              </span>
+                            </div>
+                            <span className="text-xs opacity-60">
+                              {t("knobSensitivityHint")}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs opacity-70">
+                            {t("knobUpdateFirmware")}
+                          </span>
+                        )}
                         {isCustom && original && (
                           <button
                             className="self-start rounded bg-base-200 hover:bg-base-300 px-3 py-1 text-sm"
