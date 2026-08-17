@@ -1034,7 +1034,7 @@ export default function Keyboard() {
                     min={1}
                     max={10}
                     step={1}
-                    className="flex-1"
+                    className="w-80"
                     value={
                       knobSensitivity.sensitivities?.[
                         keymap.layers[selectedLayerIndex].id
@@ -1044,10 +1044,7 @@ export default function Keyboard() {
                       const layerId = keymap.layers[selectedLayerIndex].id;
                       const v = Number(e.target.value);
                       knobSensitivity.setSensitivities((prev) => {
-                        if (!prev) {
-                          return prev;
-                        }
-                        const next = [...prev];
+                        const next = [...(prev ?? [])];
                         next[layerId] = v;
                         return next;
                       });
