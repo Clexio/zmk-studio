@@ -988,81 +988,32 @@ export default function Keyboard() {
                       <div key={si} className="flex flex-col gap-2">
                         <EventValuePicker
                           label={t("knobLeftEvent")}
-                          value={isCustom ? sensorBinding.param1 : 0}
+                          value={isCustom ? sensorBinding.param2 : 0}
                           fallbackKeycode={isCustom ? undefined : leftDefault}
+                          onValueChange={(v) =>
+                            doUpdateSensorBinding(si, {
+                              behaviorId: customKnobBehaviorId!,
+                              param1: isCustom
+                                ? sensorBinding.param1
+                                : (rightDefault ?? 0),
+                              param2: v,
+                            })
+                          }
+                        />
+                        <EventValuePicker
+                          label={t("knobRightEvent")}
+                          value={isCustom ? sensorBinding.param1 : 0}
+                          fallbackKeycode={isCustom ? undefined : rightDefault}
                           onValueChange={(v) =>
                             doUpdateSensorBinding(si, {
                               behaviorId: customKnobBehaviorId!,
                               param1: v,
                               param2: isCustom
                                 ? sensorBinding.param2
-                                : (rightDefault ?? 0),
-                            })
-                          }
-                        />
-                        <EventValuePicker
-                          label={t("knobRightEvent")}
-                          value={isCustom ? sensorBinding.param2 : 0}
-                          fallbackKeycode={isCustom ? undefined : rightDefault}
-                          onValueChange={(v) =>
-                            doUpdateSensorBinding(si, {
-                              behaviorId: customKnobBehaviorId!,
-                              param1: isCustom
-                                ? sensorBinding.param1
                                 : (leftDefault ?? 0),
-                              param2: v,
                             })
                           }
                         />
-                        {knobSensitivity.supported ? (
-                          <div className="flex flex-col gap-1">
-                            <label className="text-sm">
-                              {t("knobSensitivity")}
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="range"
-                                min={1}
-                                max={10}
-                                step={1}
-                                className="flex-1"
-                                value={
-                                  knobSensitivity.sensitivities?.[
-                                    keymap.layers[selectedLayerIndex].id
-                                  ] ?? 1
-                                }
-                                onChange={(e) => {
-                                  const layerId =
-                                    keymap.layers[selectedLayerIndex].id;
-                                  const v = Number(e.target.value);
-                                  knobSensitivity.setSensitivities((prev) => {
-                                    if (!prev) {
-                                      return prev;
-                                    }
-                                    const next = [...prev];
-                                    next[layerId] = v;
-                                    return next;
-                                  });
-                                  knobSensitivity.setSensitivity(layerId, v);
-                                }}
-                              />
-                              <span className="text-sm w-8 text-right">
-                                {
-                                  knobSensitivity.sensitivities?.[
-                                    keymap.layers[selectedLayerIndex].id
-                                  ] ?? 1
-                                }
-                              </span>
-                            </div>
-                            <span className="text-xs opacity-60">
-                              {t("knobSensitivityHint")}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs opacity-70">
-                            {t("knobUpdateFirmware")}
-                          </span>
-                        )}
                         {isCustom && original && (
                           <button
                             className="self-start rounded bg-base-200 hover:bg-base-300 px-3 py-1 text-sm"
@@ -1077,6 +1028,52 @@ export default function Keyboard() {
                     );
                   })}
                 </>
+              )}
+              {knobSensitivity.supported ? (
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm">{t("knobSensitivity")}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      className="flex-1"
+                      value={
+                        knobSensitivity.sensitivities?.[
+                          keymap.layers[selectedLayerIndex].id
+                        ] ?? 1
+                      }
+                      onChange={(e) => {
+                        const layerId = keymap.layers[selectedLayerIndex].id;
+                        const v = Number(e.target.value);
+                        knobSensitivity.setSensitivities((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+                          const next = [...prev];
+                          next[layerId] = v;
+                          return next;
+                        });
+                        knobSensitivity.setSensitivity(layerId, v);
+                      }}
+                    />
+                    <span className="text-sm w-8 text-right">
+                      {
+                        knobSensitivity.sensitivities?.[
+                          keymap.layers[selectedLayerIndex].id
+                        ] ?? 1
+                      }
+                    </span>
+                  </div>
+                  <span className="text-xs opacity-60">
+                    {t("knobSensitivityHint")}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs opacity-70">
+                  {t("knobSensitivityUnsupported")}
+                </span>
               )}
             </div>
           )}
