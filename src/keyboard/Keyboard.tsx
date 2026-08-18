@@ -370,6 +370,8 @@ export default function Keyboard() {
   useEffect(() => {
     setSelectedLayerIndex(0);
     setSelectedKeyPosition(undefined);
+    // 换键盘/重连后清空原传感器绑定快照，避免“恢复默认”写回上一把键盘的绑定
+    originalSensorBindingsRef.current = new Map();
   }, [conn]);
 
   useEffect(() => {
@@ -378,18 +380,22 @@ export default function Keyboard() {
         return;
       }
 
-      let resp = await call_rpc(conn.conn, {
-        keymap: { setActivePhysicalLayout: selectedPhysicalLayoutIndex },
-      });
+      try {
+        let resp = await call_rpc(conn.conn, {
+          keymap: { setActivePhysicalLayout: selectedPhysicalLayoutIndex },
+        });
 
-      let new_keymap = resp?.keymap?.setActivePhysicalLayout?.ok;
-      if (new_keymap) {
-        setKeymap(new_keymap);
-      } else {
-        console.error(
-          "Failed to set the active physical layout err:",
-          resp?.keymap?.setActivePhysicalLayout?.err
-        );
+        let new_keymap = resp?.keymap?.setActivePhysicalLayout?.ok;
+        if (new_keymap) {
+          setKeymap(new_keymap);
+        } else {
+          console.error(
+            "Failed to set the active physical layout err:",
+            resp?.keymap?.setActivePhysicalLayout?.err
+          );
+        }
+      } catch (e) {
+        console.error("Failed to set active physical layout", e);
       }
     }
 

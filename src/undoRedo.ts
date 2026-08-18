@@ -5,7 +5,7 @@ export type UndoCallback = () => Promise<void>;
 export type DoCallback = () => Promise<UndoCallback>;
 
 export function useUndoRedo(): [
-  (dc: DoCallback) => Promise<void>,
+  (dc: DoCallback, preserveRedo?: boolean) => Promise<void>,
   () => Promise<void>,
   () => Promise<void>,
   boolean,
@@ -29,48 +29,66 @@ export function useUndoRedo(): [
 
   const doIt = async (doCb: DoCallback, preserveRedo?: boolean) => {
     setLocked(true);
-    let undo = await doCb();
-
-    setUndoStack([[doCb, undo], ...undoStack]);
-    if (!preserveRedo) {
-      setRedoStack([]);
+    try {
+      // 只有操作真正成功才入撤销栈，避免失败操作污染历史
+      const undo = await doCb();
+      setUndoStack((prev) => [[doCb, undo], ...prev]);
+      if (!preserveRedo) {
+        setRedoStack([]);
+      }
+    } catch (e) {
+      console.error("Failed to apply edit; not added to undo history", e);
+    } finally {
+      setLocked(false);
     }
-    setLocked(false);
   };
 
   const undo = async () => {
     if (locked) {
-      throw new Error("undo invoked when existing operation in progress");
+      console.error("undo invoked when existing operation in progress");
+      return;
     }
 
     if (undoStack.length === 0) {
-      throw new Error("undo invoked with no operations to undo");
+      return;
     }
 
     setLocked(true);
-    let [doCb, undoCb] = undoStack[0];
-    setUndoStack(undoStack.slice(1));
-    setRedoStack([doCb, ...redoStack]);
-
-    await undoCb();
-
-    setLocked(false);
+    const [doCb, undoCb] = undoStack[0];
+    try {
+      // 先执行撤销，成功后才出栈并进入 redo 栈；
+      // 失败则保留原撤销项，用户可重试
+      await undoCb();
+      setUndoStack((prev) => prev.slice(1));
+      setRedoStack((prev) => [doCb, ...prev]);
+    } catch (e) {
+      console.error("Failed to undo", e);
+    } finally {
+      setLocked(false);
+    }
   };
 
   const redo = async () => {
     if (locked) {
-      throw new Error("redo invoked when existing operation in progress");
+      console.error("redo invoked when existing operation in progress");
+      return;
     }
 
     if (redoStack.length === 0) {
-      throw new Error("redo invoked with no operations to redo");
+      return;
     }
 
-    let doCb = redoStack[0];
-
-    setRedoStack(redoStack.slice(1));
-
-    return await doIt(doCb, true);
+    setLocked(true);
+    const doCb = redoStack[0];
+    try {
+      const undo = await doCb();
+      setRedoStack((prev) => prev.slice(1));
+      setUndoStack((prev) => [[doCb, undo], ...prev]);
+    } catch (e) {
+      console.error("Failed to redo", e);
+    } finally {
+      setLocked(false);
+    }
   };
 
   const reset = () => {
@@ -82,5 +100,5 @@ export function useUndoRedo(): [
 }
 
 export const UndoRedoContext = createContext<
-  ((dc: DoCallback) => Promise<void>) | null
+  ((dc: DoCallback, preserveRedo?: boolean) => Promise<void>) | null
 >(null);

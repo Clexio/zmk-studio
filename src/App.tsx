@@ -5,7 +5,7 @@ import { call_rpc } from "./rpc/logging";
 
 import type { Notification } from "@zmkfirmware/zmk-studio-ts-client/studio";
 import { ConnectionState, ConnectionContext } from "./rpc/ConnectionContext";
-import { Dispatch, useCallback, useEffect, useState } from "react";
+import { Dispatch, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectModal, TransportFactory } from "./ConnectModal";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
@@ -110,7 +110,8 @@ async function connect(
   setConnectedDeviceName: Dispatch<string | undefined>,
   setConnectedFirmwareVersion: Dispatch<string | undefined>,
   signal: AbortSignal,
-  onError: () => void
+  onError: () => void,
+  onDeviceVersion?: (version?: string) => void
 ) {
   let conn = await create_rpc_connection(transport, { signal });
 
@@ -141,6 +142,7 @@ async function connect(
 
   setConnectedDeviceName(details.name);
   setConnectedFirmwareVersion(details.version);
+  onDeviceVersion?.(details.version);
   setConn({ conn });
 }
 
@@ -158,6 +160,7 @@ function App() {
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
   const [showFirmwareUpdate, setShowFirmwareUpdate] = useState(false);
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
+  const pendingFirmwareVersionRef = useRef<string | undefined>(undefined);
 
   const [lockState, setLockState] = useState<LockState>(
     LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
@@ -295,10 +298,17 @@ function App() {
         setConnectedDeviceName,
         setConnectedFirmwareVersion,
         ac.signal,
-        () => showToast(t("connectFailed"), "error")
+        () => showToast(t("connectFailed"), "error"),
+        (version) => {
+          const pending = pendingFirmwareVersionRef.current;
+          pendingFirmwareVersionRef.current = undefined;
+          if (pending && version && version !== pending) {
+            showToast(t("firmwareVersionMismatch"), "error");
+          }
+        }
       );
     },
-    [setConn, setConnectedDeviceName, setConnectedFirmwareVersion]
+    [setConn, setConnectedDeviceName, setConnectedFirmwareVersion, showToast, t]
   );
 
   return (
@@ -320,7 +330,10 @@ function App() {
             onClose={() => setShowFirmwareUpdate(false)}
             conn={conn.conn}
             currentVersion={connectedFirmwareVersion}
-            onUpdated={(v) => setConnectedFirmwareVersion(v)}
+            onUpdated={(v) => {
+              pendingFirmwareVersionRef.current = v;
+              setConnectedFirmwareVersion(v);
+            }}
           />
           <div className="bg-base-100 text-base-content h-full max-h-[100dvh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
             <AppHeader

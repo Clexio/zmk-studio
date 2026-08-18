@@ -176,7 +176,7 @@ fn apply_staged(
     staging: &Path,
     platform_files: &PlatformFiles,
     version: &str,
-    platform: &str,
+    _platform: &str,
 ) -> Result<(), String> {
     let dir = monitor_dir();
     for f in &platform_files.files {
@@ -195,25 +195,30 @@ fn apply_staged(
         }
     }
 
-    // 只清理监控包类文件（脚本/二进制），避免误删 daily.json、日志等
-    let known: HashSet<String> = required_files(platform)
+    // 只删除“上次发布清单里有、新清单里没有”的文件，避免误删用户文件
+    let last_manifest_path = dir.join(".last_manifest");
+    let new_names: HashSet<String> = platform_files
+        .files
         .iter()
-        .map(|s| s.to_string())
+        .filter_map(|f| sanitize_file_name(&f.name).ok())
         .collect();
-    if let Ok(entries) = std::fs::read_dir(&dir) {
-        for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let is_monitor_file = known.contains(&name)
-                || name == "keyplayer-monitor"
-                || name.ends_with(".ps1")
-                || name.ends_with(".bat")
-                || name.ends_with(".vbs")
-                || name.ends_with(".sh");
-            if is_monitor_file && !platform_files.files.iter().any(|f| f.name == name) {
-                let _ = std::fs::remove_file(entry.path());
+    if let Ok(content) = std::fs::read_to_string(&last_manifest_path) {
+        for line in content.lines() {
+            let name = line.trim();
+            if name.is_empty() || name == "." || name == ".." {
+                continue;
+            }
+            if !new_names.contains(name) {
+                let _ = std::fs::remove_file(dir.join(name));
             }
         }
     }
+    let mut manifest_content = String::new();
+    for name in &new_names {
+        manifest_content.push_str(name);
+        manifest_content.push('\n');
+    }
+    let _ = std::fs::write(&last_manifest_path, manifest_content);
 
     std::fs::write(dir.join("version.txt"), version).map_err(|e| e.to_string())?;
     let _ = std::fs::remove_dir_all(staging);
@@ -375,7 +380,7 @@ fn stop_any_monitor_fallback() -> Result<(), String> {
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
     // 与 stop-monitor.bat 等价的通用停止命令：
     // 按命令行特征杀掉 codex-monitor / ble-pusher / watchdog / mic-wake-monitor / 启动VBS
-    let script = r#"Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='wscript.exe'" | Where-Object { $_.CommandLine -match 'codex-monitor|ble-pusher|watchdog|mic-wake-monitor|\.vbs' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"#;
+    let script = r#"Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='wscript.exe'" | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match 'codex-monitor|ble-pusher|watchdog|mic-wake-monitor|\.vbs' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"#;
     std::process::Command::new("powershell")
         .args([
             "-NoProfile",

@@ -134,6 +134,8 @@ const en = {
     "The bootloader drive is still mounted. The firmware write may have failed.",
   firmwareUpdateDoneHint:
     "If the keyboard does not reconnect automatically, select it again from the device list.",
+  firmwareVersionMismatch:
+    "Firmware version after update does not match the manifest. Please reconnect or flash manually.",
   writeFailed: "Firmware write failed",
   downloadUnavailable: "Unable to load download links. Please try again later.",
   loadingDownloads: "Loading download links…",
@@ -271,6 +273,7 @@ const zh: typeof en = {
   retryDetect: "重新检测磁盘",
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
   firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
+  firmwareVersionMismatch: "升级后固件版本与清单不一致，请重新连接或手动刷机",
   writeFailed: "固件写入失败",
   downloadUnavailable: "无法获取下载链接，请稍后重试。",
   loadingDownloads: "正在获取下载链接…",

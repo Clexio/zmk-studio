@@ -129,11 +129,6 @@ pub async fn serial_connect(
                 opened = Some(port);
                 break;
             }
-            Err(_e) if attempt < 9 => {
-                // macOS 上设备节点可能稍晚才创建完成，短暂重试可避免
-                // “No such file or directory”。
-                tokio::time::sleep(Duration::from_millis(500)).await;
-            }
             Err(e) => {
                 let desc = e.description.to_lowercase();
                 if desc.contains("permission")
@@ -141,6 +136,15 @@ pub async fn serial_connect(
                     || desc.contains("denied")
                 {
                     return Err(serial_permission_hint().to_string());
+                }
+                // 仅对瞬态错误重试：设备节点稍晚创建、复位后驱动未释放等；
+                // 权限/拒绝类确定性错误立即返回，不拖 5 秒。
+                let transient = desc.contains("no such file")
+                    || desc.contains("not found")
+                    || desc.contains("busy");
+                if transient && attempt < 9 {
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+                    continue;
                 }
                 if desc.contains("busy") || desc.contains("resource busy") {
                     return Err("端口忙：设备可能刚重启，请等待几秒后重试，或重新插拔 USB".to_string());
@@ -186,12 +190,15 @@ pub async fn serial_connect(
 
             tauri::async_runtime::spawn(async move {
                 use tauri::Manager;
+                use tauri::Emitter;
 
+                let mut write_failed = false;
                 while let Some(data) = recv.next().await {
                     // write_all 保证整包发出；串口可能只写入部分字节，
                     // 忽略返回值会导致请求被截断（例如刷机指令、层数据请求）。
                     if let Err(e) = writer.write_all(&data).await {
                         eprintln!("serial write failed: {e}");
+                        write_failed = true;
                         break;
                     }
                 }
@@ -199,6 +206,10 @@ pub async fn serial_connect(
                 let state = ahc.state::<super::commands::ActiveConnection>();
                 read_process.abort();
                 *state.conn.lock().await = None;
+                // 写失败同样要通知前端断开，否则界面会一直显示“已连接”
+                if write_failed {
+                    ahc.emit("connection_disconnected", ());
+                }
             });
 
             Ok(true)
