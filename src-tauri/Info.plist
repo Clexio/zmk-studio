@@ -2,7 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>NSBluetoothAlwaysUsageDescription</key>
-  <string>Request bluetooth access for wireless access for config</string>
+  <key>NSAllowsLocalNetworking</key>
+  <true/>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>KeyPlayer Studio 需要访问本机任务监控服务以显示 token 用量</string>
+  <key>NSExceptionDomains</key>
+  <dict>
+    <key>127.0.0.1</key>
+    <dict>
+      <key>NSExceptionAllowsInsecureHTTPLoads</key>
+      <true/>
+    </dict>
+    <key>localhost</key>
+    <dict>
+      <key>NSExceptionAllowsInsecureHTTPLoads</key>
+      <true/>
+    </dict>
+  </dict>
 </dict>
 </plist>

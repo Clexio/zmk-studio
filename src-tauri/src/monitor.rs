@@ -95,12 +95,46 @@ fn package_installed() -> bool {
     required_files(platform()).iter().all(|f| dir.join(f).exists())
 }
 
+#[cfg(target_os = "windows")]
+fn monitor_process_running() -> bool {
+    let out = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe' OR Name='keyplayer-monitor.exe'\" | Where-Object { $_.CommandLine -match 'codex-monitor|keyplayer-monitor' } | Select-Object -First 1",
+        ])
+        .output();
+    match out {
+        Ok(o) => !o.stdout.is_empty(),
+        // 查询失败时回退为仅 TCP 判断，避免误报“未运行”
+        Err(_) => true,
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn monitor_process_running() -> bool {
+    let out = std::process::Command::new("pgrep")
+        .args(["-f", "keyplayer-monitor"])
+        .output();
+    match out {
+        Ok(o) => o.status.success(),
+        Err(_) => true,
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn monitor_process_running() -> bool {
+    true
+}
+
+/// 端口可连 + 确实是我们的监控进程，才认为“运行中”，避免其它进程占用 9753 造成误判
 fn monitor_is_running() -> bool {
     let addr = match "127.0.0.1:9753".parse::<std::net::SocketAddr>() {
         Ok(a) => a,
         Err(_) => return false,
     };
     TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok()
+        && monitor_process_running()
 }
 
 fn sha256_hex(data: &[u8]) -> String {
@@ -130,7 +164,7 @@ fn wait_until(mut cond: impl FnMut() -> bool, timeout: Duration) -> bool {
 pub fn status() -> MonitorStatus {
     let dir = monitor_dir();
     let version_file = dir.join("version.txt");
-    let installed = version_file.exists();
+    let installed = package_installed();
     let version = if installed {
         std::fs::read_to_string(&version_file).unwrap_or_default()
     } else {
@@ -179,6 +213,17 @@ pub async fn monitor_install() -> Result<MonitorStatus, String> {
             return Err(format!("文件校验失败：{}", f.name));
         }
         std::fs::write(dir.join(safe_name), data).map_err(|e| e.to_string())?;
+        // Unix 下确保二进制/脚本可执行（OSS 下载默认 0644，不 +x 会导致启动静默失败）
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let target = dir.join(safe_name);
+            if let Ok(meta) = std::fs::metadata(&target) {
+                let mut perm = meta.permissions();
+                perm.set_mode(0o755);
+                let _ = std::fs::set_permissions(&target, perm);
+            }
+        }
     }
 
     std::fs::write(dir.join("version.txt"), manifest.version.clone()).map_err(|e| e.to_string())?;
@@ -270,7 +315,9 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
             run_hidden(&start_bat)?;
         }
         // 等监控真正运行起来再返回，避免界面误显示“已关闭”
-        wait_until(monitor_is_running, Duration::from_secs(15));
+        if !wait_until(monitor_is_running, Duration::from_secs(15)) {
+            return Err("监控启动超时：请检查监控进程".to_string());
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -279,7 +326,9 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
         if sh.exists() {
             run_sh(&sh)?;
         }
-        wait_until(monitor_is_running, Duration::from_secs(15));
+        if !wait_until(monitor_is_running, Duration::from_secs(15)) {
+            return Err("监控启动超时：请检查监控程序是否可执行（权限）".to_string());
+        }
     }
 
     #[cfg(target_os = "linux")]
@@ -291,10 +340,14 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
         if !monitor_is_running() {
             let bin = monitor_dir().join("keyplayer-monitor");
             if bin.exists() {
-                let _ = std::process::Command::new(&bin).spawn();
+                std::process::Command::new(&bin)
+                    .spawn()
+                    .map_err(|e| format!("启动监控失败：{e}"))?;
             }
         }
-        wait_until(monitor_is_running, Duration::from_secs(15));
+        if !wait_until(monitor_is_running, Duration::from_secs(15)) {
+            return Err("监控启动超时：请检查监控程序是否可执行（权限）".to_string());
+        }
     }
 
     Ok(status())
@@ -312,25 +365,31 @@ pub fn monitor_stop() -> Result<MonitorStatus, String> {
             stop_any_monitor_fallback()?;
         }
         // 等监控真正退出再返回，避免界面误显示“已打开”
-        wait_until(|| !monitor_is_running(), Duration::from_secs(10));
+        if !wait_until(|| !monitor_is_running(), Duration::from_secs(10)) {
+            return Err("监控停止超时：仍有监控进程在运行".to_string());
+        }
     }
 
     #[cfg(target_os = "macos")]
     {
         let sh = monitor_dir().join("uninstall_launchagent.sh");
         if sh.exists() {
-            let _ = run_sh(&sh);
+            run_sh(&sh)?;
         }
-        wait_until(|| !monitor_is_running(), Duration::from_secs(10));
+        if !wait_until(|| !monitor_is_running(), Duration::from_secs(10)) {
+            return Err("监控停止超时：仍有监控进程在运行".to_string());
+        }
     }
 
     #[cfg(target_os = "linux")]
     {
         let sh = monitor_dir().join("uninstall_linux.sh");
         if sh.exists() {
-            let _ = run_sh(&sh);
+            run_sh(&sh)?;
         }
-        wait_until(|| !monitor_is_running(), Duration::from_secs(10));
+        if !wait_until(|| !monitor_is_running(), Duration::from_secs(10)) {
+            return Err("监控停止超时：仍有监控进程在运行".to_string());
+        }
     }
 
     Ok(status())

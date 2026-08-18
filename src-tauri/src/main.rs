@@ -37,11 +37,38 @@ fn uf2_drive_candidates() -> Vec<PathBuf> {
 
     #[cfg(all(unix, not(target_os = "macos")))]
     {
+        // 主路径：解析 /proc/mounts，直接按挂载点找 UF2 引导盘，
+        // 兼容 /media/<用户>/<卷标>、/run/media/<用户>/<卷标> 等两级挂载布局
+        if let Ok(content) = std::fs::read_to_string("/proc/mounts") {
+            for line in content.lines() {
+                let mut parts = line.split_whitespace();
+                let _dev = parts.next();
+                if let Some(mp) = parts.next() {
+                    let mount = PathBuf::from(mp);
+                    if is_uf2_drive(&mount) {
+                        candidates.push(mount);
+                    }
+                }
+            }
+        }
+
+        // 兜底：常见自动挂载根目录做两级递归（不依赖 /proc/mounts 的发行版）
         let bases = ["/media", "/run/media", "/mnt"];
         for base in bases {
             if let Ok(entries) = std::fs::read_dir(base) {
                 for entry in entries.flatten() {
-                    candidates.push(entry.path());
+                    let l1 = entry.path();
+                    if is_uf2_drive(&l1) {
+                        candidates.push(l1.clone());
+                    }
+                    if let Ok(sub) = std::fs::read_dir(&l1) {
+                        for sub_entry in sub.flatten() {
+                            let l2 = sub_entry.path();
+                            if is_uf2_drive(&l2) {
+                                candidates.push(l2);
+                            }
+                        }
+                    }
                 }
             }
         }

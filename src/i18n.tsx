@@ -6,6 +6,7 @@ export type Language = "zh" | "en";
 const en = {
   appName: "KeyPlayer Studio",
   connectFailed: "Failed to connect to the chosen device",
+  notConnected: "Not connected",
   restoreStockSettings: "Restore Stock Settings",
   restoreStockSettingsTitle: "Restore Stock Settings",
   restoreStockSettingsDesc:
@@ -17,10 +18,11 @@ const en = {
   redo: "Redo",
   save: "Save",
   discard: "Discard",
+  unsavedChanges: "Unsaved changes",
   aboutZmkStudio: "About KeyPlayer Studio",
   licenseNotice: "License NOTICE",
   welcome: "Welcome to KeyPlayer Studio",
-  selectDevice: "Select A Device:",
+  selectDevice: "Select a device:",
   rescanPorts: "Rescan ports",
   rescanning: "Scanning…",
   noSerialFound:
@@ -30,7 +32,8 @@ const en = {
   browserNotSupportedPart1:
     "Your browser is not supported. KeyPlayer Studio uses either",
   browserNotSupportedPart2: "or",
-  browserNotSupportedPart3: "(Linux only) to connect to KeyPlayer devices.",
+  browserNotSupportedPart3:
+    "to connect to KeyPlayer devices. Web Bluetooth is not enabled in this build.",
   toUseStudio: "To use KeyPlayer Studio, either:",
   useSupportedBrowser:
     "Use a browser that supports the above web technologies, e.g. Chrome/Edge, or",
@@ -52,6 +55,7 @@ const en = {
   layers: "Layers",
   newLayerName: "New Layer Name",
   keymapLayerAria: "Keymap Layer",
+  renameLayer: "Rename layer",
   keyName: "Key Naming",
   keyNamePlaceholder: "e.g. Up",
   behavior: "Behavior:",
@@ -91,7 +95,8 @@ const en = {
   seeGithubReleases: "See GitHub Releases →",
   licenseText:
     "ZMK Studio is released under the open source Apache 2.0 license. A copy of the NOTICE file from the ZMK Studio repository is included here:",
-  someComposite: "Some composite?",
+  someComposite:
+    "This behavior uses composite parameters that cannot be edited here.",
   layerNameLabel: "Layer Name",
   firmwareUpdate: "Firmware Update",
   currentVersion: "Current version",
@@ -129,6 +134,9 @@ const en = {
     "The bootloader drive is still mounted. The firmware write may have failed.",
   firmwareUpdateDoneHint:
     "If the keyboard does not reconnect automatically, select it again from the device list.",
+  writeFailed: "Firmware write failed",
+  downloadUnavailable: "Unable to load download links. Please try again later.",
+  loadingDownloads: "Loading download links…",
   firmwareUpdateWarnings:
     "Note: Bluetooth pairing information will be lost after the update. Power the keyboard off and on, remove the old pairing on both the computer and the keyboard, then pair again. Otherwise Bluetooth will not connect.",
   monitorToggle: "Task Monitor",
@@ -142,6 +150,7 @@ const en = {
 const zh: typeof en = {
   appName: "KeyPlayer Studio",
   connectFailed: "无法连接到所选设备",
+  notConnected: "未连接",
   restoreStockSettings: "恢复出厂设置",
   restoreStockSettingsTitle: "恢复出厂设置",
   restoreStockSettingsDesc:
@@ -153,6 +162,7 @@ const zh: typeof en = {
   redo: "重做",
   save: "保存",
   discard: "放弃更改",
+  unsavedChanges: "有未保存的更改",
   aboutZmkStudio: "关于 KeyPlayer Studio",
   licenseNotice: "许可声明",
   welcome: "欢迎使用 KeyPlayer Studio",
@@ -164,7 +174,7 @@ const zh: typeof en = {
   selectConnectionType: "选择连接方式：",
   browserNotSupportedPart1: "你的浏览器不受支持。KeyPlayer Studio 需要使用",
   browserNotSupportedPart2: "或",
-  browserNotSupportedPart3: "（仅限 Linux）来连接 KeyPlayer 设备。",
+  browserNotSupportedPart3: "来连接 KeyPlayer 设备（Web Bluetooth 未启用）。",
   toUseStudio: "要使用 KeyPlayer Studio，你可以：",
   useSupportedBrowser: "使用支持上述技术的浏览器（例如 Chrome / Edge），或",
   downloadApp: "下载我们的跨平台应用。",
@@ -184,6 +194,7 @@ const zh: typeof en = {
   layers: "层",
   newLayerName: "新层名",
   keymapLayerAria: "键位层",
+  renameLayer: "重命名层",
   keyName: "按键命名",
   keyNamePlaceholder: "如：上移",
   behavior: "行为：",
@@ -223,7 +234,7 @@ const zh: typeof en = {
   seeGithubReleases: "查看 GitHub Releases →",
   licenseText:
     "ZMK Studio 以开源 Apache 2.0 许可证发布。这里包含来自 ZMK Studio 仓库的 NOTICE 文件副本：",
-  someComposite: "复合参数？",
+  someComposite: "该行为使用了复合参数，暂不支持在此编辑。",
   layerNameLabel: "层名",
   firmwareUpdate: "固件更新",
   currentVersion: "当前版本",
@@ -255,6 +266,9 @@ const zh: typeof en = {
   retryDetect: "重新检测磁盘",
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
   firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
+  writeFailed: "固件写入失败",
+  downloadUnavailable: "无法获取下载链接，请稍后重试。",
+  loadingDownloads: "正在获取下载链接…",
   firmwareUpdateWarnings:
     "注：固件更新后蓝牙配对信息失效，请将键盘手动关机重启，并且删除设备端和键盘端的蓝牙配对信息，重新配对。否则蓝牙无法连接成功。",
   monitorToggle: "任务监控",
