@@ -1,0 +1,2 @@
+# KeyPlayer Studio / ZMK keyboard serial ports
+KERNEL=="ttyACM*", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="615e", MODE="0660", GROUP="dialout"

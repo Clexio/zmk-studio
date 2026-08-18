@@ -33,20 +33,20 @@ declare global {
   }
 }
 
-const TRANSPORTS: TransportFactory[] = [
-  navigator.serial && { label: "USB", connect: serial_connect },
-  ...(window.__TAURI_INTERNALS__
-    ? [
-        {
-          label: "USB",
-          pick_and_connect: {
-            connect: tauri_serial_connect,
-            list: serial_list_devices,
-          },
+// Tauri 环境只保留后端串口传输，避免 WebView 暴露 navigator.serial 时出现重复 USB 条目
+const TRANSPORTS: TransportFactory[] = window.__TAURI_INTERNALS__
+  ? [
+      {
+        label: "USB",
+        pick_and_connect: {
+          connect: tauri_serial_connect,
+          list: serial_list_devices,
         },
-      ]
-    : []),
-].filter((t) => t !== undefined);
+      },
+    ]
+  : (navigator.serial
+      ? [{ label: "USB", connect: serial_connect }]
+      : []);
 
 async function listen_for_notifications(
   notification_stream: ReadableStream<Notification>,

@@ -21,7 +21,7 @@ const ZMK_USB_PID: u16 = 0x615e;
 /// Some(false) = 能打开但不是监控口（通常是 Studio 改键口）
 /// None        = 无法打开（可能被守护程序占用）
 fn probe_monitor_port(port_name: &str) -> Option<bool> {
-    let mut port = serialport::new(port_name, 115200)
+    let mut port = serialport::new(port_name, 9600)
         .timeout(Duration::from_millis(500))
         .open()
         .ok()?;
@@ -48,6 +48,23 @@ fn probe_monitor_port(port_name: &str) -> Option<bool> {
     Some(String::from_utf8_lossy(&buf[..got]).contains("PONG"))
 }
 
+/// 把打开串口的错误转成用户可理解的中文提示
+fn serial_open_error_text(port_name: &str) -> String {
+    let err = serialport::new(port_name, 9600)
+        .timeout(Duration::from_millis(100))
+        .open()
+        .err();
+    if let Some(e) = err {
+        let desc = e.description.to_lowercase();
+        if desc.contains("permission") || desc.contains("access") || desc.contains("denied") {
+            return "无权限：请将当前用户加入 dialout 组并重新登录".to_string();
+        }
+        format!("被占用：{}", e.description)
+    } else {
+        "被占用".to_string()
+    }
+}
+
 /// 给 ZMK 键盘的串口起一个容易识别的名字
 fn keyboard_port_label(u: &serialport::UsbPortInfo, port_name: &str) -> String {
     let base = u
@@ -58,7 +75,7 @@ fn keyboard_port_label(u: &serialport::UsbPortInfo, port_name: &str) -> String {
     match probe_monitor_port(port_name) {
         Some(true) => format!("{} · 监控口（勿选）", base),
         Some(false) => format!("{} · Studio 改键口", base),
-        None => format!("{} · 键盘串口（被占用）", base),
+        None => format!("{} · {}", base, serial_open_error_text(port_name)),
     }
 }
 
@@ -114,7 +131,12 @@ pub async fn serial_connect(
             Ok(true)
         }
         Err(e) => {
-            Err(format!("Failed to open the serial port: {}", e.description))
+            let desc = e.description.to_lowercase();
+            if desc.contains("permission") || desc.contains("access") || desc.contains("denied") {
+                Err("无权限打开串口：请将当前用户加入 dialout 组并重新登录".to_string())
+            } else {
+                Err(format!("Failed to open the serial port: {}", e.description))
+            }
         }
     }
 }

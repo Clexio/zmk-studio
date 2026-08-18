@@ -161,16 +161,22 @@ export const FirmwareUpdateModal = ({
 
       // 5) 写入 U 盘，引导程序自动烧录并重启
       setStep("flashing");
+      let writeError: unknown = null;
       try {
         await write_uf2_to_drive(drive, data);
       } catch (e) {
         // 引导程序写完最后一块会立即重启并弹出 U 盘，
         // 此时写入可能报“设备断开”，但烧录实际已经完成，属正常现象。
+        writeError = e;
         console.warn("UF2 write reported an error (drive may have reset):", e);
       }
       setStep("rebooting");
       const driveGone = await waitForUf2DriveGone(30000);
       if (!driveGone) {
+        if (writeError !== null) {
+          setErrorDetail(String(writeError));
+          throw new Error("writeFailed");
+        }
         throw new Error("stillMounted");
       }
 

@@ -32,7 +32,8 @@ const en = {
   browserNotSupportedPart1:
     "Your browser is not supported. KeyPlayer Studio uses either",
   browserNotSupportedPart2: "or",
-  browserNotSupportedPart3: "(Linux only) to connect to KeyPlayer devices.",
+  browserNotSupportedPart3:
+    "to connect to KeyPlayer devices. Web Bluetooth is not enabled in this build.",
   toUseStudio: "To use KeyPlayer Studio, either:",
   useSupportedBrowser:
     "Use a browser that supports the above web technologies, e.g. Chrome/Edge, or",
@@ -133,6 +134,9 @@ const en = {
     "The bootloader drive is still mounted. The firmware write may have failed.",
   firmwareUpdateDoneHint:
     "If the keyboard does not reconnect automatically, select it again from the device list.",
+  writeFailed: "Firmware write failed",
+  downloadUnavailable: "Unable to load download links. Please try again later.",
+  loadingDownloads: "Loading download links…",
   firmwareUpdateWarnings:
     "Note: Bluetooth pairing information will be lost after the update. Power the keyboard off and on, remove the old pairing on both the computer and the keyboard, then pair again. Otherwise Bluetooth will not connect.",
   monitorToggle: "Task Monitor",
@@ -170,7 +174,7 @@ const zh: typeof en = {
   selectConnectionType: "选择连接方式：",
   browserNotSupportedPart1: "你的浏览器不受支持。KeyPlayer Studio 需要使用",
   browserNotSupportedPart2: "或",
-  browserNotSupportedPart3: "（仅限 Linux）来连接 KeyPlayer 设备。",
+  browserNotSupportedPart3: "来连接 KeyPlayer 设备（Web Bluetooth 未启用）。",
   toUseStudio: "要使用 KeyPlayer Studio，你可以：",
   useSupportedBrowser: "使用支持上述技术的浏览器（例如 Chrome / Edge），或",
   downloadApp: "下载我们的跨平台应用。",
@@ -262,6 +266,9 @@ const zh: typeof en = {
   retryDetect: "重新检测磁盘",
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
   firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
+  writeFailed: "固件写入失败",
+  downloadUnavailable: "无法获取下载链接，请稍后重试。",
+  loadingDownloads: "正在获取下载链接…",
   firmwareUpdateWarnings:
     "注：固件更新后蓝牙配对信息失效，请将键盘手动关机重启，并且删除设备端和键盘端的蓝牙配对信息，重新配对。否则蓝牙无法连接成功。",
   monitorToggle: "任务监控",
