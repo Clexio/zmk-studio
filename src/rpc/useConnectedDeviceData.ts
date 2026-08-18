@@ -33,10 +33,24 @@ export function useConnectedDeviceData<T>(
           return;
         }
 
-        let response = response_mapper(await call_rpc(connection.conn, req));
-
-        if (!ignore) {
-          setData(response);
+        // 读取型请求（层数据/布局/旋钮参数）失败时自动重试，
+        // 避免串口偶发丢包导致界面一直空白（例如 macOS 上大响应被拆分）。
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            let response = response_mapper(
+              await call_rpc(connection.conn, req)
+            );
+            if (!ignore) {
+              setData(response);
+            }
+            return;
+          } catch (e) {
+            if (attempt < 2) {
+              await new Promise((r) => setTimeout(r, 500));
+            } else {
+              console.error("RPC request failed after retries", req, e);
+            }
+          }
         }
       }
 

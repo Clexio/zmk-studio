@@ -109,7 +109,7 @@ export const FirmwareUpdateModal = ({
     }
   }, []);
 
-  const startUpdate = useCallback(async () => {
+  const runUpdate = useCallback(async (skipReboot: boolean) => {
     if (!latest || busyRef.current) {
       return;
     }
@@ -120,21 +120,45 @@ export const FirmwareUpdateModal = ({
     setErrorDetail("");
     try {
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
-      if (conn) {
-        // 串口可能因重启/拔线而断开，RPC 可能永不返回；
-        // 加 3 秒超时，保证流程一定能走到“等待刷机盘/重新检测”阶段
-        const r = await Promise.race([
-          call_rpc(conn, { core: { rebootToBootloader: true } }),
-          new Promise<Error>((resolve) =>
-            setTimeout(() => resolve(new Error("rpcTimeout")), 3000)
-          ),
-        ]);
-        setBootManual(r instanceof Error);
+      if (!skipReboot) {
+        if (conn) {
+          // 串口可能因重启/拔线而断开，RPC 可能永不返回；
+          // 加重试（最多 3 次），确保指令尽量送达键盘。
+          let rebooted = false;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              await Promise.race([
+                call_rpc(conn, { core: { rebootToBootloader: true } }),
+                new Promise<never>((_resolve, reject) =>
+                  setTimeout(() => reject(new Error("rpcTimeout")), 3000)
+                ),
+              ]);
+              rebooted = true;
+              break;
+            } catch (e: any) {
+              // 固件成功重启后不会回响应（No RPC response received），
+              // 这种情况视为指令已送达。
+              if (
+                e === "No response" ||
+                (e instanceof Error && e.message === "No RPC response received")
+              ) {
+                rebooted = true;
+                break;
+              }
+              if (attempt < 2) {
+                await sleep(1000);
+              }
+            }
+          }
+          setBootManual(!rebooted);
+        } else {
+          setBootManual(true);
+        }
       } else {
         setBootManual(true);
       }
 
-      // 2) 等待 NRFMicroBOOT 盘出现（最多 60 秒；也可手动双击复位键）
+      // 2) 等待 NRFMicroBOOT 盘出现（最长 120 秒；也可手动双击复位键）
       const drive = await waitForUf2Drive(120000);
       if (!drive) {
         setBootManual(true);
@@ -197,6 +221,14 @@ export const FirmwareUpdateModal = ({
       busyRef.current = false;
     }
   }, [latest, conn]);
+
+  const startUpdate = useCallback(async () => {
+    await runUpdate(false);
+  }, [runUpdate]);
+
+  const retryDrive = useCallback(async () => {
+    await runUpdate(true);
+  }, [runUpdate]);
 
   useEffect(() => {
     if (open) {
@@ -299,7 +331,7 @@ export const FirmwareUpdateModal = ({
           {phase === "error" && errorKey === "noDrive" && (
             <button
               className="rounded bg-primary text-primary-content hover:opacity-90 px-3 py-2"
-              onClick={startUpdate}
+              onClick={retryDrive}
             >
               {t("retryDetect")}
             </button>
