@@ -22,8 +22,19 @@ import {
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { LanguagePicker, useI18n } from "./i18n";
+import type { TranslationKey } from "./i18n";
 import { useTheme } from "./misc/useTheme";
 import { monitorStatus, monitorStart, monitorStop } from "./tauri/monitor";
+import { listen } from "@tauri-apps/api/event";
+
+const MONITOR_PROGRESS_KEYS: Record<string, TranslationKey> = {
+  checking: "monitorChecking",
+  new_version: "monitorNewVersion",
+  downloading: "monitorDownloading",
+  replacing: "monitorReplacing",
+  starting: "monitorStarting",
+  check_failed_use_local: "monitorCheckFailedUseLocal",
+};
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -55,6 +66,7 @@ export const AppHeader = ({
   const [showSettingsReset, setShowSettingsReset] = useState(false);
   const [monitorState, setMonitorState] = useState<"busy" | "on" | "off">("off");
   const [monitorBusyAction, setMonitorBusyAction] = useState<"start" | "stop" | null>(null);
+  const [monitorProgress, setMonitorProgress] = useState<string | null>(null);
   const [monitorError, setMonitorError] = useState("");
   const { t } = useI18n();
   const theme = useTheme();
@@ -95,6 +107,34 @@ export const AppHeader = ({
       .catch(() => setMonitorState("off"));
   }, [isMonitorSupported]);
 
+  // 监听后端推送的监控更新/启动进度
+  useEffect(() => {
+    if (!isMonitorSupported) {
+      return;
+    }
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+    listen<string>("monitor_progress", (event) => {
+      if (!cancelled) {
+        setMonitorProgress(event.payload);
+        if (event.payload === "check_failed_use_local") {
+          // 检查失败但使用本地版本：把提示留在错误区，避免一闪而过
+          setMonitorError(t("monitorCheckFailedUseLocal"));
+        }
+      }
+    }).then((fn) => {
+      if (cancelled) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [isMonitorSupported]);
+
   const toggleMonitor = async () => {
     if (monitorState === "busy") {
       return;
@@ -102,14 +142,17 @@ export const AppHeader = ({
     setMonitorState("busy");
     setMonitorBusyAction(monitorState === "on" ? "stop" : "start");
     setMonitorError("");
+    setMonitorProgress(null);
     try {
       const s =
         monitorState === "on"
           ? await monitorStop()
           : await monitorStart();
       setMonitorState(s.running ? "on" : "off");
+      setMonitorProgress(null);
     } catch (e) {
       setMonitorError(String(e));
+      setMonitorProgress(null);
       try {
         const s = await monitorStatus();
         setMonitorState(s.running ? "on" : "off");
@@ -194,7 +237,10 @@ export const AppHeader = ({
               >
                 {monitorState === "busy"
                   ? monitorBusyAction === "start"
-                    ? t("monitorStarting")
+                    ? t(
+                        MONITOR_PROGRESS_KEYS[monitorProgress ?? ""] ??
+                          "monitorChecking"
+                      )
                     : t("monitorStopping")
                   : monitorState === "on"
                     ? t("monitorOn")

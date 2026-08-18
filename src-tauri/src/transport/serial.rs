@@ -176,7 +176,12 @@ pub async fn serial_connect(
                 use tauri::Manager;
 
                 while let Some(data) = recv.next().await {
-                    let _res = writer.write(&data).await;
+                    // write_all 保证整包发出；串口可能只写入部分字节，
+                    // 忽略返回值会导致请求被截断（例如刷机指令、层数据请求）。
+                    if let Err(e) = writer.write_all(&data).await {
+                        eprintln!("serial write failed: {e}");
+                        break;
+                    }
                 }
 
                 let state = ahc.state::<super::commands::ActiveConnection>();

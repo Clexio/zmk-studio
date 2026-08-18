@@ -66,35 +66,39 @@ function useBehaviors(): BehaviorMap {
         return;
       }
 
-      let get_behaviors: Request = {
-        behaviors: { listAllBehaviors: true },
-        requestId: 0,
-      };
+      try {
+        let get_behaviors: Request = {
+          behaviors: { listAllBehaviors: true },
+          requestId: 0,
+        };
 
-      let behavior_list = await call_rpc(connection.conn, get_behaviors);
-      if (!ignore) {
-        let behavior_map: BehaviorMap = {};
-        for (let behaviorId of behavior_list.behaviors?.listAllBehaviors
-          ?.behaviors || []) {
-          if (ignore) {
-            break;
-          }
-          let details_req = {
-            behaviors: { getBehaviorDetails: { behaviorId } },
-            requestId: 0,
-          };
-          let behavior_details = await call_rpc(connection.conn, details_req);
-          let dets: GetBehaviorDetailsResponse | undefined =
-            behavior_details?.behaviors?.getBehaviorDetails;
-
-          if (dets) {
-            behavior_map[dets.id] = dets;
-          }
-        }
-
+        let behavior_list = await call_rpc(connection.conn, get_behaviors);
         if (!ignore) {
-          setBehaviors(behavior_map);
+          let behavior_map: BehaviorMap = {};
+          for (let behaviorId of behavior_list.behaviors?.listAllBehaviors
+            ?.behaviors || []) {
+            if (ignore) {
+              break;
+            }
+            let details_req = {
+              behaviors: { getBehaviorDetails: { behaviorId } },
+              requestId: 0,
+            };
+            let behavior_details = await call_rpc(connection.conn, details_req);
+            let dets: GetBehaviorDetailsResponse | undefined =
+              behavior_details?.behaviors?.getBehaviorDetails;
+
+            if (dets) {
+              behavior_map[dets.id] = dets;
+            }
+          }
+
+          if (!ignore) {
+            setBehaviors(behavior_map);
+          }
         }
+      } catch (e) {
+        console.error("Failed to load behaviors", e);
       }
     }
 
@@ -136,17 +140,21 @@ function useKnobSensitivity(): {
       if (!connection.conn) {
         return;
       }
-      const resp = await call_rpc(connection.conn, {
-        keymap: { getKnobSensitivity: {} },
-      });
-      if (ignore) {
-        return;
-      }
-      const vals = resp.keymap?.getKnobSensitivity?.sensitivities;
-      if (vals && vals.length > 0) {
-        setSensitivities(vals);
-      } else {
-        console.error("Knob sensitivity read failed:", resp);
+      try {
+        const resp = await call_rpc(connection.conn, {
+          keymap: { getKnobSensitivity: {} },
+        });
+        if (ignore) {
+          return;
+        }
+        const vals = resp.keymap?.getKnobSensitivity?.sensitivities;
+        if (vals && vals.length > 0) {
+          setSensitivities(vals);
+        } else {
+          console.error("Knob sensitivity read failed:", resp);
+        }
+      } catch (e) {
+        console.error("Failed to read knob sensitivity", e);
       }
     }
 
@@ -162,13 +170,18 @@ function useKnobSensitivity(): {
       if (!connection.conn) {
         return false;
       }
-      const resp = await call_rpc(connection.conn, {
-        keymap: { setKnobSensitivity: { layerId, sensitivity: value } },
-      });
-      return (
-        resp.keymap?.setKnobSensitivity ===
-        SetKnobSensitivityResponse.SET_KNOB_SENSITIVITY_RESP_OK
-      );
+      try {
+        const resp = await call_rpc(connection.conn, {
+          keymap: { setKnobSensitivity: { layerId, sensitivity: value } },
+        });
+        return (
+          resp.keymap?.setKnobSensitivity ===
+          SetKnobSensitivityResponse.SET_KNOB_SENSITIVITY_RESP_OK
+        );
+      } catch (e) {
+        console.error("Failed to set knob sensitivity", e);
+        return false;
+      }
     },
     [connection]
   );
@@ -207,15 +220,19 @@ function useLayouts(): [
         return;
       }
 
-      let response = await call_rpc(connection.conn, {
-        keymap: { getPhysicalLayouts: true },
-      });
+      try {
+        let response = await call_rpc(connection.conn, {
+          keymap: { getPhysicalLayouts: true },
+        });
 
-      if (!ignore) {
-        setLayouts(response?.keymap?.getPhysicalLayouts?.layouts);
-        setSelectedPhysicalLayoutIndex(
-          response?.keymap?.getPhysicalLayouts?.activeLayoutIndex || 0
-        );
+        if (!ignore) {
+          setLayouts(response?.keymap?.getPhysicalLayouts?.layouts);
+          setSelectedPhysicalLayoutIndex(
+            response?.keymap?.getPhysicalLayouts?.activeLayoutIndex || 0
+          );
+        }
+      } catch (e) {
+        console.error("Failed to load physical layouts", e);
       }
     }
 

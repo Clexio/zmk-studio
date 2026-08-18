@@ -122,17 +122,13 @@ export const FirmwareUpdateModal = ({
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
       if (!skipReboot) {
         if (conn) {
-          // 串口可能因重启/拔线而断开，RPC 可能永不返回；
-          // 加重试（最多 3 次），确保指令尽量送达键盘。
+          // call_rpc 已有 5 秒超时：串口断开会以 "No response" 结束，
+          // 丢包/无响应会以 RPC timeout 结束。这里最多重试 3 次，
+          // 确保指令尽量送达键盘。
           let rebooted = false;
           for (let attempt = 0; attempt < 3; attempt++) {
             try {
-              await Promise.race([
-                call_rpc(conn, { core: { rebootToBootloader: true } }),
-                new Promise<never>((_resolve, reject) =>
-                  setTimeout(() => reject(new Error("rpcTimeout")), 3000)
-                ),
-              ]);
+              await call_rpc(conn, { core: { rebootToBootloader: true } });
               rebooted = true;
               break;
             } catch (e: any) {

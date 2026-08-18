@@ -212,10 +212,13 @@ function App() {
       if (!conn.conn) {
         return;
       }
-
-      let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
-      if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
-        console.error("Failed to save changes", resp.keymap?.saveChanges);
+      try {
+        let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
+        if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
+          console.error("Failed to save changes", resp.keymap?.saveChanges);
+        }
+      } catch (e) {
+        console.error("Failed to save changes", e);
       }
     }
 
@@ -227,12 +230,15 @@ function App() {
       if (!conn.conn) {
         return;
       }
-
-      let resp = await call_rpc(conn.conn, {
-        keymap: { discardChanges: true },
-      });
-      if (!resp.keymap?.discardChanges) {
-        console.error("Failed to discard changes", resp);
+      try {
+        let resp = await call_rpc(conn.conn, {
+          keymap: { discardChanges: true },
+        });
+        if (!resp.keymap?.discardChanges) {
+          console.error("Failed to discard changes", resp);
+        }
+      } catch (e) {
+        console.error("Failed to discard changes", e);
       }
 
       reset();
@@ -247,12 +253,15 @@ function App() {
       if (!conn.conn) {
         return;
       }
-
-      let resp = await call_rpc(conn.conn, {
-        core: { resetSettings: true },
-      });
-      if (!resp.core?.resetSettings) {
-        console.error("Failed to settings reset", resp);
+      try {
+        let resp = await call_rpc(conn.conn, {
+          core: { resetSettings: true },
+        });
+        if (!resp.core?.resetSettings) {
+          console.error("Failed to settings reset", resp);
+        }
+      } catch (e) {
+        console.error("Failed to settings reset", e);
       }
 
       reset();

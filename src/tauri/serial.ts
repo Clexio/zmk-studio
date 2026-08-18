@@ -31,14 +31,19 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
   const unlisten_data = await listen(
     "connection_data",
     (event: { payload: Array<number> }) => {
-      write_chain = write_chain.then(async () => {
-        let writer = response_writable.getWriter();
-        try {
-          await writer.write(new Uint8Array(event.payload));
-        } finally {
-          writer.releaseLock();
-        }
-      });
+      write_chain = write_chain
+        .then(async () => {
+          let writer = response_writable.getWriter();
+          try {
+            await writer.write(new Uint8Array(event.payload));
+          } finally {
+            writer.releaseLock();
+          }
+        })
+        .catch((e) => {
+          // 单块写入失败不能中断整条链，否则后续数据块会全部丢失
+          console.error("connection_data write failed", e);
+        });
     }
   );
 
@@ -47,7 +52,9 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
     async (_ev: any) => {
       unlisten_data();
       unlisten_disconnected();
-      write_chain = write_chain.then(() => response_writable.close());
+      write_chain = write_chain
+        .then(() => response_writable.close())
+        .catch(() => response_writable.close());
     }
   );
 

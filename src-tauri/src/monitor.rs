@@ -3,11 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
+use tauri::{AppHandle, Emitter};
 
 const MONITOR_MANIFEST_URL: &str =
     "https://keyplayer.oss-cn-shanghai.aliyuncs.com/KeyPlayer/monitor/latest.json";
@@ -84,6 +85,139 @@ fn monitor_dir() -> PathBuf {
         std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
     };
     PathBuf::from(base).join("KeyPlayerStudio").join("monitor")
+}
+
+/// 向客户端推送监控进度（前端据此显示“发现新版本/正在下载新文件…”）。
+fn emit_progress(app: &AppHandle, stage: &str) -> Result<(), String> {
+    app.emit("monitor_progress", stage)
+        .map_err(|e| format!("推送监控进度失败：{e}"))
+}
+
+fn sanitize_file_name(name: &str) -> Result<String, String> {
+    let safe = Path::new(name)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| format!("非法文件名：{name}"))?;
+    if safe.is_empty() || safe == "." || safe == ".." {
+        return Err(format!("非法文件名：{name}"));
+    }
+    Ok(safe.to_string())
+}
+
+async fn fetch_monitor_manifest() -> Result<MonitorManifest, String> {
+    let text = crate::http_get_text(MONITOR_MANIFEST_URL.to_string())
+        .await
+        .map_err(|e| format!("获取监控清单失败：{e}"))?;
+    serde_json::from_str(&text).map_err(|e| format!("监控清单格式错误：{e}"))
+}
+
+fn local_file_matches(path: &Path, expected: &str) -> bool {
+    if expected.is_empty() {
+        return true;
+    }
+    let Ok(data) = std::fs::read(path) else {
+        return false;
+    };
+    sha256_hex(&data).eq_ignore_ascii_case(expected)
+}
+
+/// 判断是否需要更新：版本号不同，或任一清单文件缺失/哈希不一致。
+fn needs_update(manifest: &MonitorManifest, platform: &str) -> bool {
+    let dir = monitor_dir();
+    let version_file = dir.join("version.txt");
+    let local_version = std::fs::read_to_string(&version_file).unwrap_or_default();
+    if local_version.trim() != manifest.version.trim() {
+        return true;
+    }
+    let Some(platform_files) = manifest.platforms.get(platform) else {
+        return true;
+    };
+    platform_files
+        .files
+        .iter()
+        .any(|f| !local_file_matches(&dir.join(&f.name), &f.sha256))
+}
+
+/// 把所有文件下载到 staging 目录并逐文件校验（不直接碰正式目录）。
+async fn download_to_staging(platform_files: &PlatformFiles) -> Result<PathBuf, String> {
+    let dir = monitor_dir();
+    let staging = dir.join(".staging");
+    if staging.exists() {
+        std::fs::remove_dir_all(&staging).map_err(|e| e.to_string())?;
+    }
+    std::fs::create_dir_all(&staging).map_err(|e| e.to_string())?;
+
+    for f in &platform_files.files {
+        let safe_name = sanitize_file_name(&f.name)?;
+        let data = crate::http_get_bytes(f.url.clone())
+            .await
+            .map_err(|e| format!("下载 {} 失败：{e}", f.name))?;
+        if !f.sha256.is_empty() && !sha256_hex(&data).eq_ignore_ascii_case(&f.sha256) {
+            return Err(format!("文件校验失败：{}", f.name));
+        }
+        let target = staging.join(&safe_name);
+        std::fs::write(&target, data).map_err(|e| format!("写入 {} 失败：{e}", f.name))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let meta = std::fs::metadata(&target).map_err(|e| e.to_string())?;
+            let mut perm = meta.permissions();
+            perm.set_mode(0o755);
+            std::fs::set_permissions(&target, perm)
+                .map_err(|e| format!("设置监控文件权限失败：{e}"))?;
+        }
+    }
+    Ok(staging)
+}
+
+/// 用 staging 目录替换正式目录内容，最后写 version.txt；
+/// 清理清单中已移除的旧脚本/二进制（保留 daily.json、日志等用户数据）。
+fn apply_staged(
+    staging: &Path,
+    platform_files: &PlatformFiles,
+    version: &str,
+    platform: &str,
+) -> Result<(), String> {
+    let dir = monitor_dir();
+    for f in &platform_files.files {
+        let safe_name = sanitize_file_name(&f.name)?;
+        std::fs::copy(staging.join(&safe_name), dir.join(&safe_name))
+            .map_err(|e| format!("替换 {} 失败：{e}", f.name))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let target = dir.join(&safe_name);
+            let meta = std::fs::metadata(&target).map_err(|e| e.to_string())?;
+            let mut perm = meta.permissions();
+            perm.set_mode(0o755);
+            std::fs::set_permissions(&target, perm)
+                .map_err(|e| format!("设置监控文件权限失败：{e}"))?;
+        }
+    }
+
+    // 只清理监控包类文件（脚本/二进制），避免误删 daily.json、日志等
+    let known: HashSet<String> = required_files(platform)
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let is_monitor_file = known.contains(&name)
+                || name == "keyplayer-monitor"
+                || name.ends_with(".ps1")
+                || name.ends_with(".bat")
+                || name.ends_with(".vbs")
+                || name.ends_with(".sh");
+            if is_monitor_file && !platform_files.files.iter().any(|f| f.name == name) {
+                let _ = std::fs::remove_file(entry.path());
+            }
+        }
+    }
+
+    std::fs::write(dir.join("version.txt"), version).map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_dir_all(staging);
+    Ok(())
 }
 
 /// 监控包是否完整（版本标记 + 关键文件都在）。
@@ -197,56 +331,23 @@ pub fn status() -> MonitorStatus {
 }
 
 #[tauri::command]
-pub async fn monitor_install() -> Result<MonitorStatus, String> {
+pub async fn monitor_install(app: AppHandle) -> Result<MonitorStatus, String> {
     let platform = platform();
     if platform == "unsupported" {
         return Err("当前系统暂不支持任务监控".to_string());
     }
 
-    let text = crate::http_get_text(MONITOR_MANIFEST_URL.to_string())
-        .await
-        .map_err(|e| format!("获取监控清单失败：{e}"))?;
-    let manifest: MonitorManifest =
-        serde_json::from_str(&text).map_err(|e| format!("监控清单格式错误：{e}"))?;
+    let manifest = fetch_monitor_manifest().await?;
     let platform_files = manifest
         .platforms
         .get(platform)
         .ok_or_else(|| "该平台监控暂未发布".to_string())?;
 
-    let dir = monitor_dir();
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-
-    for f in &platform_files.files {
-        let safe_name = Path::new(&f.name)
-            .file_name()
-            .and_then(|s| s.to_str())
-            .ok_or_else(|| format!("非法文件名：{}", f.name))?;
-        if safe_name.is_empty() || safe_name == "." || safe_name == ".." {
-            return Err(format!("非法文件名：{}", f.name));
-        }
-        let data = crate::http_get_bytes(f.url.clone())
-            .await
-            .map_err(|e| format!("下载 {} 失败：{e}", f.name))?;
-        let actual = sha256_hex(&data);
-        if !f.sha256.is_empty() && actual.to_lowercase() != f.sha256.to_lowercase() {
-            return Err(format!("文件校验失败：{}", f.name));
-        }
-        std::fs::write(dir.join(safe_name), data).map_err(|e| e.to_string())?;
-        // Unix 下确保二进制/脚本可执行（OSS 下载默认 0644，不 +x 会导致启动静默失败）
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let target = dir.join(safe_name);
-            if let Ok(meta) = std::fs::metadata(&target) {
-                let mut perm = meta.permissions();
-                perm.set_mode(0o755);
-                std::fs::set_permissions(&target, perm)
-                    .map_err(|e| format!("设置监控文件权限失败：{e}"))?;
-            }
-        }
-    }
-
-    std::fs::write(dir.join("version.txt"), manifest.version.clone()).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(monitor_dir()).map_err(|e| e.to_string())?;
+    emit_progress(&app, "downloading")?;
+    let staging = download_to_staging(platform_files).await?;
+    emit_progress(&app, "replacing")?;
+    apply_staged(&staging, platform_files, &manifest.version, platform)?;
     Ok(status())
 }
 
@@ -313,14 +414,7 @@ fn run_sh(script: &Path) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-pub async fn monitor_start() -> Result<MonitorStatus, String> {
-    if !package_installed() {
-        monitor_install().await?;
-        // 重新安装后需要重新注册开机自启
-        let _ = std::fs::remove_file(monitor_dir().join(".startup_done"));
-    }
-
+fn start_platform() -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         let dir = monitor_dir();
@@ -380,6 +474,50 @@ pub async fn monitor_start() -> Result<MonitorStatus, String> {
         }
         if !wait_until(monitor_is_running, Duration::from_secs(15)) {
             return Err("监控启动超时：请检查监控程序是否可执行（权限）".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn monitor_start(app: AppHandle) -> Result<MonitorStatus, String> {
+    let platform = platform();
+    if platform == "unsupported" {
+        return Err("当前系统暂不支持任务监控".to_string());
+    }
+
+    emit_progress(&app, "checking")?;
+
+    match fetch_monitor_manifest().await {
+        Ok(manifest) => {
+            let platform_files = manifest
+                .platforms
+                .get(platform)
+                .ok_or_else(|| "该平台监控暂未发布".to_string())?;
+            if needs_update(&manifest, platform) {
+                emit_progress(&app, "new_version")?;
+                // 更新前先停掉运行中的监控，避免替换被占用的文件
+                if monitor_is_running() {
+                    monitor_stop()?;
+                }
+                emit_progress(&app, "downloading")?;
+                let staging = download_to_staging(platform_files).await?;
+                emit_progress(&app, "replacing")?;
+                apply_staged(&staging, platform_files, &manifest.version, platform)?;
+            }
+            emit_progress(&app, "starting")?;
+            start_platform()?;
+        }
+        Err(e) => {
+            if package_installed() {
+                // OSS 拉取失败但本地已安装：继续启动本地版本，并提示检查失败
+                emit_progress(&app, "check_failed_use_local")?;
+                emit_progress(&app, "starting")?;
+                start_platform()?;
+            } else {
+                return Err(format!("获取监控清单失败：{e}"));
+            }
         }
     }
 

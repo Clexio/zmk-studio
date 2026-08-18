@@ -32,8 +32,10 @@ pub async fn transport_send_data(
     if let InvokeBody::Raw(data) = req.body() {
         let mut lock = state.conn.lock().await;
 
-        let sink = lock.as_mut().unwrap();
-        sink.send(data.clone()).await;
+        let sink = lock.as_mut().ok_or(())?;
+        // 连接已断开时发送会失败，必须把错误传回前端，
+        // 否则请求静默丢失，界面会一直等待响应。
+        sink.send(data.clone()).await.map_err(|_| ())?;
     }
 
     Ok(())

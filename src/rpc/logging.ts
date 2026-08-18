@@ -17,6 +17,8 @@ export async function call_rpc(
     })
     .catch((e) => {
       console.error("RPC Error", e);
-      return e;
+      // 必须继续抛出，否则所有调用方都无法感知失败，
+      // 重试逻辑（层数据、锁状态、刷机指令）会全部失效。
+      throw e;
     });
 }

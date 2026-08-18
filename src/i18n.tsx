@@ -145,6 +145,11 @@ const en = {
   monitorOff: "Off",
   monitorStarting: "Starting monitor…",
   monitorStopping: "Stopping monitor…",
+  monitorChecking: "Checking for monitor updates…",
+  monitorNewVersion: "New version found",
+  monitorDownloading: "Downloading new files…",
+  monitorReplacing: "Replacing files…",
+  monitorCheckFailedUseLocal: "Update check failed; using local version",
 };
 
 const zh: typeof en = {
@@ -277,6 +282,11 @@ const zh: typeof en = {
   monitorOff: "已关闭",
   monitorStarting: "正在打开监控…",
   monitorStopping: "正在关闭监控…",
+  monitorChecking: "正在检查更新…",
+  monitorNewVersion: "发现新版本",
+  monitorDownloading: "正在下载新文件…",
+  monitorReplacing: "正在替换文件…",
+  monitorCheckFailedUseLocal: "检查更新失败，使用本地版本",
 };
 
 export type TranslationKey = keyof typeof en;
