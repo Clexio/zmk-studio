@@ -35,7 +35,6 @@
       "entitlements": null,
       "exceptionDomain": "",
       "frameworks": [],
-      "infoPlist": "Info.plist",
       "providerShortName": null,
       "signingIdentity": "-"
     },
