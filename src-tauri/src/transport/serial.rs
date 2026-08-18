@@ -18,7 +18,7 @@ const ZMK_USB_PID: u16 = 0x615e;
 
 /// macOS 会为每个串口同时生成 /dev/tty.*（拨入）和 /dev/cu.*（呼叫）两个节点，
 /// 只有 /dev/cu.* 适合被应用打开。列表与连接统一走 cu 路径，避免重复和
-/// “No such file or directory”/卡死问题。
+/// “No such file or directory”问题。
 fn normalized_port_path(name: &str) -> String {
     #[cfg(target_os = "macos")]
     {
@@ -39,11 +39,6 @@ fn probe_monitor_port(port_name: &str) -> Option<bool> {
         .timeout(Duration::from_millis(500))
         .open()
         .ok()?;
-
-    // macOS 下必须拉起 DTR，ZMK 的 CDC 口才会把数据发回电脑（PONG 才会收到）。
-    let _ = port.set_dtr(true);
-    let _ = port.set_rts(true);
-    std::thread::sleep(Duration::from_millis(120));
 
     let _ = port.write(b"PING\n");
 
@@ -128,7 +123,7 @@ pub async fn serial_connect(
                 opened = Some(port);
                 break;
             }
-            Err(e) if attempt < 2 => {
+            Err(_e) if attempt < 2 => {
                 // macOS 上设备节点可能稍晚才创建完成，短暂重试可避免
                 // “No such file or directory”。
                 tokio::time::sleep(Duration::from_millis(250)).await;
@@ -148,10 +143,6 @@ pub async fn serial_connect(
 
     match opened {
         Some(mut port) => {
-            // 拉起 DTR/RTS，确保 ZMK CDC 口在 macOS 上也能向电脑发送数据。
-            let _ = port.set_dtr(true);
-            let _ = port.set_rts(true);
-
             #[cfg(unix)]
             port.set_exclusive(false)
                 .expect("Unable to set serial port exclusive to false");
@@ -203,22 +194,24 @@ pub async fn serial_connect(
 pub async fn serial_list_devices(app_handle: AppHandle) -> Result<Vec<super::commands::AvailableDevice>, ()> {
     let ports = unblock(|| available_ports()).await.unwrap();
 
+    let mut seen = std::collections::HashSet::new();
     let mut candidates = ports
         .into_iter()
         .filter_map(|pi| {
-            // macOS 只保留 /dev/cu.*，去掉重复的 /dev/tty.* 节点。
-            if cfg!(target_os = "macos") && pi.port_name.starts_with("/dev/tty.") {
-                return None;
-            }
-
             if let SerialPortType::UsbPort(u) = pi.port_type {
+                // macOS：tty.* 与 cu.* 是同一设备的两个节点，统一归一化为
+                // cu.* 并去重，避免列表里出现重复口。
+                let port_name = normalized_port_path(&pi.port_name);
+                if !seen.insert(port_name.clone()) {
+                    return None;
+                }
                 let label = if u.vid == ZMK_USB_VID && u.pid == ZMK_USB_PID {
-                    keyboard_port_label(&u, &pi.port_name)
+                    keyboard_port_label(&u, &port_name)
                 } else {
                     u.product.unwrap_or("Unnamed device".to_string())
                 };
                 Some(super::commands::AvailableDevice {
-                    id: pi.port_name,
+                    id: port_name,
                     label,
                 })
             } else {
