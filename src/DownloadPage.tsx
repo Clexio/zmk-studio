@@ -9,6 +9,7 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { DownloadIcon } from "lucide-react";
 import { APP_MANIFEST_URL } from "./firmware/config";
+import { http_get_text } from "./tauri/http";
 import { useI18n } from "./i18n";
 
 type Platform = "windows" | "mac" | "linux" | "ios" | "android" | "unknown";
@@ -99,6 +100,36 @@ function getUrlFromPattern(assets: string[], pattern: RegExp) {
   return asset;
 }
 
+async function loadManifest(): Promise<any> {
+  // 桌面端走 Rust 后端读取，彻底绕开 CORS；浏览器模式用 fetch + 超时/重试
+  if (window.__TAURI_INTERNALS__) {
+    const text = await http_get_text(APP_MANIFEST_URL);
+    return JSON.parse(text);
+  }
+
+  const doFetch = (signal: AbortSignal) =>
+    fetch(APP_MANIFEST_URL, { signal }).then((r) => {
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}`);
+      }
+      return r.json();
+    });
+
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 8000);
+    try {
+      return await doFetch(controller.signal);
+    } catch (e) {
+      lastError = e;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+  throw lastError;
+}
+
 export const Download = () => {
   const { t } = useI18n();
   const [platform, setPlatform] = useState<Platform>("unknown");
@@ -115,13 +146,7 @@ export const Download = () => {
     }
 
     // 从 OSS 读取 KeyPlayer 自己的安装包清单，避免误链到上游 ZMK Studio
-    fetch(APP_MANIFEST_URL)
-      .then((r) => {
-        if (!r.ok) {
-          throw new Error(`HTTP ${r.status}`);
-        }
-        return r.json();
-      })
+    loadManifest()
       .then((manifest: any) => {
         const urls: string[] = [];
         const platforms = manifest?.platforms || {};
@@ -146,7 +171,7 @@ export const Download = () => {
       <img src="/logo.png" alt="KeyPlayer" className="w-48 rounded-2xl" />
       <div className="text-3xl mb-1">KeyPlayer Studio</div>
       <div className="text-md mb-1 opacity-70">
-        {version || "0.3.1"}
+        {version || "0.3.2"}
       </div>
       <div className="bg-base-100 p-8 max-w-md w-full m-2 rounded-lg shadow-lg">
         {loadError ? (
@@ -157,18 +182,38 @@ export const Download = () => {
           <>
             <div className="flex flex-col gap-3 mb-3">
               {PlatformLinks[platform].map((link, i) => (
-                <a
-                  key={link.name}
-                  href={getUrlFromPattern(assets, link.urlPattern)}
-                  className={`p-3 text-lg rounded-lg justify-center items-center gap-3 flex ${
-                    i === 0
-                      ? "bg-primary hover:opacity-85 active:opacity-70 text-primary-content"
-                      : "bg-base-100 border border-base-300 text-base-content hover:bg-base-200"
-                  }`}
-                >
-                  <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6"/>{" "}
-                  {t("downloadFor")} {link.name}
-                </a>
+                (() => {
+                  const url = getUrlFromPattern(assets, link.urlPattern);
+                  if (!url) {
+                    return (
+                      <span
+                        key={link.name}
+                        className={`p-3 text-lg rounded-lg justify-center items-center gap-3 flex opacity-50 ${
+                          i === 0
+                            ? "bg-primary text-primary-content"
+                            : "bg-base-100 border border-base-300 text-base-content"
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6"/>{" "}
+                        {t("downloadFor")} {link.name}
+                      </span>
+                    );
+                  }
+                  return (
+                    <a
+                      key={link.name}
+                      href={url}
+                      className={`p-3 text-lg rounded-lg justify-center items-center gap-3 flex ${
+                        i === 0
+                          ? "bg-primary hover:opacity-85 active:opacity-70 text-primary-content"
+                          : "bg-base-100 border border-base-300 text-base-content hover:bg-base-200"
+                      }`}
+                    >
+                      <FontAwesomeIcon icon={PlatformMetadata[platform].icon} className="h-6"/>{" "}
+                      {t("downloadFor")} {link.name}
+                    </a>
+                  );
+                })()
               ))}
             </div>
           </>
@@ -187,14 +232,30 @@ export const Download = () => {
               {Object.entries(PlatformLinks).map(([platform, links]) => (
                 <div key={platform}>
                   {links.map((link) => (
-                    <a
-                      key={link.name}
-                      href={getUrlFromPattern(assets, link.urlPattern)}
-                      className="flex gap-1 mb-3 text-base-content hover:underline"
-                    >
-                      <DownloadIcon className="w-5" />
-                      {link.name}
-                    </a>
+                    (() => {
+                      const url = getUrlFromPattern(assets, link.urlPattern);
+                      if (!url) {
+                        return (
+                          <span
+                            key={link.name}
+                            className="flex gap-1 mb-3 text-base-content opacity-50"
+                          >
+                            <DownloadIcon className="w-5" />
+                            {link.name}
+                          </span>
+                        );
+                      }
+                      return (
+                        <a
+                          key={link.name}
+                          href={url}
+                          className="flex gap-1 mb-3 text-base-content hover:underline"
+                        >
+                          <DownloadIcon className="w-5" />
+                          {link.name}
+                        </a>
+                      );
+                    })()
                   ))}
                 </div>
               ))}

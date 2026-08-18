@@ -8,7 +8,7 @@
   },
   "productName": "KeyPlayer Studio",
   "mainBinaryName": "keyplayer-studio",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "identifier": "com.keyplayer.studio",
   "bundle": {
     "active": true,

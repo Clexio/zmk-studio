@@ -76,6 +76,25 @@ def main() -> int:
         headers={"x-oss-object-acl": "public-read"},
     )
     print(f"UPLOADED {manifest_key}: {manifest['version']}")
+
+    # 回读校验：OSS 清单里的哈希/大小必须与本次上传的本地文件一致，防止发布旧包
+    verify_manifest = json.loads(bucket.get_object(manifest_key).read())
+    uploaded = (
+        verify_manifest.get("platforms", {}).get(platform, {}).get("files", [])
+    )
+    local_map = {f["name"]: (f["sha256"], f["size"]) for f in files}
+    for entry in uploaded:
+        local = local_map.get(entry["name"])
+        if not local:
+            print(f"VERIFY FAIL: {entry['name']} missing locally")
+            return 1
+        if (
+            entry.get("sha256", "").lower() != local[0].lower()
+            or entry.get("size") != local[1]
+        ):
+            print(f"VERIFY FAIL: {entry['name']} hash/size mismatch")
+            return 1
+    print(f"VERIFY OK: {len(uploaded)} files match manifest")
     return 0
 
 

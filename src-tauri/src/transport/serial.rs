@@ -49,6 +49,16 @@ fn probe_monitor_port(port_name: &str) -> Option<bool> {
 }
 
 /// 把打开串口的错误转成用户可理解的中文提示
+fn serial_permission_hint() -> &'static str {
+    if cfg!(target_os = "linux") {
+        "无权限：请将当前用户加入 dialout 组并重新登录"
+    } else if cfg!(target_os = "windows") {
+        "端口被占用或无权限：请关闭占用该 COM 口的程序后重试"
+    } else {
+        "端口无法访问：请确认键盘已连接且未被其他程序占用"
+    }
+}
+
 fn serial_open_error_text(port_name: &str) -> String {
     let err = serialport::new(port_name, 9600)
         .timeout(Duration::from_millis(100))
@@ -57,7 +67,7 @@ fn serial_open_error_text(port_name: &str) -> String {
     if let Some(e) = err {
         let desc = e.description.to_lowercase();
         if desc.contains("permission") || desc.contains("access") || desc.contains("denied") {
-            return "无权限：请将当前用户加入 dialout 组并重新登录".to_string();
+            return serial_permission_hint().to_string();
         }
         format!("被占用：{}", e.description)
     } else {
@@ -133,7 +143,7 @@ pub async fn serial_connect(
         Err(e) => {
             let desc = e.description.to_lowercase();
             if desc.contains("permission") || desc.contains("access") || desc.contains("denied") {
-                Err("无权限打开串口：请将当前用户加入 dialout 组并重新登录".to_string())
+                Err(serial_permission_hint().to_string())
             } else {
                 Err(format!("Failed to open the serial port: {}", e.description))
             }

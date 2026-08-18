@@ -174,8 +174,9 @@ export const FirmwareUpdateModal = ({
       const driveGone = await waitForUf2DriveGone(30000);
       if (!driveGone) {
         if (writeError !== null) {
-          setErrorDetail(String(writeError));
-          throw new Error("writeFailed");
+          const err = new Error("writeFailed") as Error & { cause?: unknown };
+          err.cause = writeError;
+          throw err;
         }
         throw new Error("stillMounted");
       }
@@ -185,7 +186,13 @@ export const FirmwareUpdateModal = ({
     } catch (e: any) {
       setPhase("error");
       setErrorKey((e?.message as TranslationKey) || "updateFailed");
-      setErrorDetail(e?.message ? String(e.message) : String(e));
+      setErrorDetail(
+        e?.cause !== undefined
+          ? String(e.cause)
+          : e?.message
+            ? String(e.message)
+            : String(e)
+      );
     } finally {
       busyRef.current = false;
     }

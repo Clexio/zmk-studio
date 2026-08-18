@@ -6,6 +6,7 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::Duration;
 
 const MONITOR_MANIFEST_URL: &str =
@@ -101,7 +102,7 @@ fn monitor_process_running() -> bool {
         .args([
             "-NoProfile",
             "-Command",
-            "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe' OR Name='keyplayer-monitor.exe'\" | Where-Object { $_.CommandLine -match 'codex-monitor|keyplayer-monitor' } | Select-Object -First 1",
+            "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe' OR Name='keyplayer-monitor.exe'\" | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match 'KeyPlayerStudio[\\\\/]monitor' } | Select-Object -First 1",
         ])
         .output();
     match out {
@@ -127,6 +128,24 @@ fn monitor_process_running() -> bool {
     true
 }
 
+// 进程检测结果短时缓存，避免 wait 循环每 300ms 拉起一次 powershell/pgrep
+static PROCESS_CHECK_CACHE: Mutex<Option<(std::time::Instant, bool)>> = Mutex::new(None);
+
+fn monitor_process_running_cached() -> bool {
+    if let Ok(mut g) = PROCESS_CHECK_CACHE.lock() {
+        if let Some((t, v)) = *g {
+            if t.elapsed() < Duration::from_secs(2) {
+                return v;
+            }
+        }
+        let v = monitor_process_running();
+        *g = Some((std::time::Instant::now(), v));
+        v
+    } else {
+        monitor_process_running()
+    }
+}
+
 /// 端口可连 + 确实是我们的监控进程，才认为“运行中”，避免其它进程占用 9753 造成误判
 fn monitor_is_running() -> bool {
     let addr = match "127.0.0.1:9753".parse::<std::net::SocketAddr>() {
@@ -134,7 +153,7 @@ fn monitor_is_running() -> bool {
         Err(_) => return false,
     };
     TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok()
-        && monitor_process_running()
+        && monitor_process_running_cached()
 }
 
 fn sha256_hex(data: &[u8]) -> String {
@@ -221,7 +240,8 @@ pub async fn monitor_install() -> Result<MonitorStatus, String> {
             if let Ok(meta) = std::fs::metadata(&target) {
                 let mut perm = meta.permissions();
                 perm.set_mode(0o755);
-                let _ = std::fs::set_permissions(&target, perm);
+                std::fs::set_permissions(&target, perm)
+                    .map_err(|e| format!("设置监控文件权限失败：{e}"))?;
             }
         }
     }
@@ -273,11 +293,24 @@ fn stop_any_monitor_fallback() -> Result<(), String> {
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn run_sh(script: &Path) -> Result<(), String> {
-    std::process::Command::new("sh")
+    let out = std::process::Command::new("sh")
         .arg(script)
-        .spawn()
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+        .output()
+        .map_err(|e| format!("执行 {} 失败：{e}", script.display()))?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        let msg = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        Err(format!(
+            "脚本 {} 执行失败：{}",
+            script.display(),
+            if msg.is_empty() {
+                out.status.to_string()
+            } else {
+                msg
+            }
+        ))
+    }
 }
 
 #[tauri::command]
