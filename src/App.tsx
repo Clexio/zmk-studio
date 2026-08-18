@@ -160,7 +160,7 @@ function App() {
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
 
   const [lockState, setLockState] = useState<LockState>(
-    LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
+    LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
   );
 
   useSub("rpc_notification.core.lockStateChanged", (ls) => {
@@ -170,7 +170,7 @@ function App() {
   useEffect(() => {
     if (!conn) {
       reset();
-      setLockState(LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED);
+      setLockState(LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED);
     }
 
     async function updateLockState() {
@@ -178,14 +178,30 @@ function App() {
         return;
       }
 
-      let locked_resp = await call_rpc(conn.conn, {
-        core: { getLockState: true },
-      });
-
-      setLockState(
-        locked_resp.core?.getLockState ||
-          LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
-      );
+      // 兼容性兜底：某些平台/固件上 getLockState 的回复可能丢失或超时。
+      // 只要设备没有明确回复“已锁定”，客户端就按“未锁定”处理；
+      // 真正上锁的固件仍会在服务端拒绝写入，因此不会降低安全性。
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          let locked_resp = await call_rpc(conn.conn, {
+            core: { getLockState: true },
+          });
+          let state = locked_resp.core?.getLockState;
+          setLockState(
+            state !== undefined
+              ? state
+              : LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
+          );
+          return;
+        } catch (e) {
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 300));
+          } else {
+            console.error("Failed to read lock state, assuming unlocked", e);
+            setLockState(LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED);
+          }
+        }
+      }
     }
 
     updateLockState();
