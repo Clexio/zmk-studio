@@ -16,24 +16,48 @@ const READ_BUF_SIZE: usize = 1024;
 const ZMK_USB_VID: u16 = 0x1d50;
 const ZMK_USB_PID: u16 = 0x615e;
 
+/// macOS 会为每个串口同时生成 /dev/tty.*（拨入）和 /dev/cu.*（呼叫）两个节点，
+/// 只有 /dev/cu.* 适合被应用打开。列表与连接统一走 cu 路径，避免重复和
+/// “No such file or directory”/卡死问题。
+fn normalized_port_path(name: &str) -> String {
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(rest) = name.strip_prefix("/dev/tty.") {
+            return format!("/dev/cu.{rest}");
+        }
+    }
+    name.to_string()
+}
+
 /// 探测串口是否是键盘的监控口：
 /// Some(true)  = 监控口（应答 PONG）
 /// Some(false) = 能打开但不是监控口（通常是 Studio 改键口）
 /// None        = 无法打开（可能被守护程序占用）
 fn probe_monitor_port(port_name: &str) -> Option<bool> {
-    let mut port = serialport::new(port_name, 9600)
+    let port_name = normalized_port_path(port_name);
+    let mut port = serialport::new(&port_name, 9600)
         .timeout(Duration::from_millis(500))
         .open()
         .ok()?;
+
+    // macOS 下必须拉起 DTR，ZMK 的 CDC 口才会把数据发回电脑（PONG 才会收到）。
+    let _ = port.set_dtr(true);
+    let _ = port.set_rts(true);
+    std::thread::sleep(Duration::from_millis(120));
 
     let _ = port.write(b"PING\n");
 
     let mut buf = [0u8; 64];
     let mut got = 0usize;
-    let deadline = Instant::now() + Duration::from_millis(600);
+    let deadline = Instant::now() + Duration::from_millis(1200);
+    let mut retry_ping_at = Instant::now() + Duration::from_millis(500);
     while Instant::now() < deadline && got < buf.len() {
         match port.read(&mut buf[got..]) {
             Ok(0) | Err(_) => {
+                if got == 0 && Instant::now() >= retry_ping_at {
+                    let _ = port.write(b"PING\n");
+                    retry_ping_at = Instant::now() + Duration::from_millis(500);
+                }
                 std::thread::sleep(Duration::from_millis(20));
             }
             Ok(n) => {
@@ -60,7 +84,8 @@ fn serial_permission_hint() -> &'static str {
 }
 
 fn serial_open_error_text(port_name: &str) -> String {
-    let err = serialport::new(port_name, 9600)
+    let port_name = normalized_port_path(port_name);
+    let err = serialport::new(&port_name, 9600)
         .timeout(Duration::from_millis(100))
         .open()
         .err();
@@ -95,8 +120,38 @@ pub async fn serial_connect(
     app_handle: AppHandle,
     state: State<'_, super::commands::ActiveConnection<'_>>,
 ) -> Result<bool, String> {
-    match tokio_serial::new(id, 9600).open_native_async() {
-        Ok(mut port) => {
+    let id = normalized_port_path(&id);
+    let mut opened = None;
+    for attempt in 0..3 {
+        match tokio_serial::new(&id, 9600).open_native_async() {
+            Ok(port) => {
+                opened = Some(port);
+                break;
+            }
+            Err(e) if attempt < 2 => {
+                // macOS 上设备节点可能稍晚才创建完成，短暂重试可避免
+                // “No such file or directory”。
+                tokio::time::sleep(Duration::from_millis(250)).await;
+            }
+            Err(e) => {
+                let desc = e.description.to_lowercase();
+                if desc.contains("permission")
+                    || desc.contains("access")
+                    || desc.contains("denied")
+                {
+                    return Err(serial_permission_hint().to_string());
+                }
+                return Err(format!("Failed to open the serial port: {}", e.description));
+            }
+        }
+    }
+
+    match opened {
+        Some(mut port) => {
+            // 拉起 DTR/RTS，确保 ZMK CDC 口在 macOS 上也能向电脑发送数据。
+            let _ = port.set_dtr(true);
+            let _ = port.set_rts(true);
+
             #[cfg(unix)]
             port.set_exclusive(false)
                 .expect("Unable to set serial port exclusive to false");
@@ -140,14 +195,7 @@ pub async fn serial_connect(
 
             Ok(true)
         }
-        Err(e) => {
-            let desc = e.description.to_lowercase();
-            if desc.contains("permission") || desc.contains("access") || desc.contains("denied") {
-                Err(serial_permission_hint().to_string())
-            } else {
-                Err(format!("Failed to open the serial port: {}", e.description))
-            }
-        }
+        None => unreachable!(),
     }
 }
 
@@ -158,6 +206,11 @@ pub async fn serial_list_devices(app_handle: AppHandle) -> Result<Vec<super::com
     let mut candidates = ports
         .into_iter()
         .filter_map(|pi| {
+            // macOS 只保留 /dev/cu.*，去掉重复的 /dev/tty.* 节点。
+            if cfg!(target_os = "macos") && pi.port_name.starts_with("/dev/tty.") {
+                return None;
+            }
+
             if let SerialPortType::UsbPort(u) = pi.port_type {
                 let label = if u.vid == ZMK_USB_VID && u.pid == ZMK_USB_PID {
                     keyboard_port_label(&u, &pi.port_name)
