@@ -1,14 +1,10 @@
 name: Publish installers to OSS
 
 on:
-  workflow_run:
-    workflows: ["Build Windows App", "Build macOS App", "Build Linux App"]
-    types: [completed]
   workflow_dispatch:
 
 jobs:
   publish:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
