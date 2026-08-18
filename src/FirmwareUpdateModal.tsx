@@ -146,6 +146,13 @@ export const FirmwareUpdateModal = ({
               }
             }
           }
+          // 键盘即将复位：主动关闭串口管道，让 macOS 尽快释放 CDC 端口，
+          // 避免复位后端口一直被标记为“被占用”。
+          try {
+            await conn.request_writable.close();
+          } catch {
+            // 设备可能已重启、管道已关闭，忽略即可
+          }
           setBootManual(!rebooted);
         } else {
           setBootManual(true);

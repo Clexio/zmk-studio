@@ -89,6 +89,12 @@ fn serial_open_error_text(port_name: &str) -> String {
         if desc.contains("permission") || desc.contains("access") || desc.contains("denied") {
             return serial_permission_hint().to_string();
         }
+        if desc.contains("busy") || desc.contains("resource busy") {
+            return "端口忙：设备可能刚重启，请等待几秒后重试，或重新插拔 USB".to_string();
+        }
+        if desc.contains("no such file") || desc.contains("not found") {
+            return "端口不存在：设备可能未连接或仍在重启，请稍候重试".to_string();
+        }
         format!("被占用：{}", e.description)
     } else {
         "被占用".to_string()
@@ -117,16 +123,16 @@ pub async fn serial_connect(
 ) -> Result<bool, String> {
     let id = normalized_port_path(&id);
     let mut opened = None;
-    for attempt in 0..3 {
+    for attempt in 0..10 {
         match tokio_serial::new(&id, 9600).open_native_async() {
             Ok(port) => {
                 opened = Some(port);
                 break;
             }
-            Err(_e) if attempt < 2 => {
+            Err(_e) if attempt < 9 => {
                 // macOS 上设备节点可能稍晚才创建完成，短暂重试可避免
                 // “No such file or directory”。
-                tokio::time::sleep(Duration::from_millis(250)).await;
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
             Err(e) => {
                 let desc = e.description.to_lowercase();
@@ -135,6 +141,12 @@ pub async fn serial_connect(
                     || desc.contains("denied")
                 {
                     return Err(serial_permission_hint().to_string());
+                }
+                if desc.contains("busy") || desc.contains("resource busy") {
+                    return Err("端口忙：设备可能刚重启，请等待几秒后重试，或重新插拔 USB".to_string());
+                }
+                if desc.contains("no such file") || desc.contains("not found") {
+                    return Err("端口不存在：设备可能未连接或仍在重启，请稍候重试".to_string());
                 }
                 return Err(format!("Failed to open the serial port: {}", e.description));
             }
