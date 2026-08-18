@@ -18,7 +18,7 @@
       "deb": {
         "depends": [],
         "files": {
-          "udev/50-keyplayer.rules": "/etc/udev/rules.d/50-keyplayer.rules"
+          "/etc/udev/rules.d/50-keyplayer.rules": "udev/50-keyplayer.rules"
         }
       }
     },
