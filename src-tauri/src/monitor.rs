@@ -497,13 +497,14 @@ pub async fn monitor_start(app: AppHandle) -> Result<MonitorStatus, String> {
                 .ok_or_else(|| "该平台监控暂未发布".to_string())?;
             if needs_update(&manifest, platform) {
                 emit_progress(&app, "new_version")?;
-                // 更新前先停掉运行中的监控，避免替换被占用的文件
+                emit_progress(&app, "downloading")?;
+                // 先下载并校验到 staging，成功后再停旧监控；
+                // 否则下载失败会把正在运行的监控关掉，用户会以为监控坏了。
+                let staging = download_to_staging(platform_files).await?;
+                emit_progress(&app, "replacing")?;
                 if monitor_is_running() {
                     monitor_stop()?;
                 }
-                emit_progress(&app, "downloading")?;
-                let staging = download_to_staging(platform_files).await?;
-                emit_progress(&app, "replacing")?;
                 apply_staged(&staging, platform_files, &manifest.version, platform)?;
             }
             emit_progress(&app, "starting")?;
