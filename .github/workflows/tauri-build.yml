@@ -1,10 +1,9 @@
 name: "tauri-build"
 
+# 停用：该模板工作流缺少 ts-client 子目录，npm ci 会失败；
+# 实际三端构建由 build-{macos,windows,linux}-app.yml 负责。
 on:
   workflow_dispatch:
-  push:
-  release:
-    types: [published]
 
 jobs:
   publish-tauri:

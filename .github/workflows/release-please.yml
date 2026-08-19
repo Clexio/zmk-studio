@@ -1,7 +1,7 @@
+# 停用：缺少 GITHUB_TOKEN 权限导致每次 push 都失败；
+# 版本由发布流程手动管理，不需要 release-please 自动开 PR。
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions: {}
 
