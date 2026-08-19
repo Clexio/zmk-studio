@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 
-import { Request } from "@zmkfirmware/zmk-studio-ts-client";
+import { Request, RequestResponse } from "@zmkfirmware/zmk-studio-ts-client";
 import { call_rpc } from "../rpc/logging";
 import {
   PhysicalLayout,
@@ -62,43 +62,57 @@ function useBehaviors(): BehaviorMap {
     async function startRequest() {
       setBehaviors({});
 
-      if (!connection.conn) {
+      const conn = connection.conn;
+      if (!conn) {
         return;
       }
 
-      try {
-        let get_behaviors: Request = {
-          behaviors: { listAllBehaviors: true },
-          requestId: 0,
-        };
-
-        let behavior_list = await call_rpc(connection.conn, get_behaviors);
-        if (!ignore) {
-          let behavior_map: BehaviorMap = {};
-          for (let behaviorId of behavior_list.behaviors?.listAllBehaviors
-            ?.behaviors || []) {
-            if (ignore) {
-              break;
-            }
-            let details_req = {
-              behaviors: { getBehaviorDetails: { behaviorId } },
-              requestId: 0,
-            };
-            let behavior_details = await call_rpc(connection.conn, details_req);
-            let dets: GetBehaviorDetailsResponse | undefined =
-              behavior_details?.behaviors?.getBehaviorDetails;
-
-            if (dets) {
-              behavior_map[dets.id] = dets;
-            }
-          }
-
-          if (!ignore) {
-            setBehaviors(behavior_map);
+      // 先取行为 ID 列表，整体失败时重试（避免连接初期并发请求偶发失败导致永久空白）。
+      let behavior_list: RequestResponse | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          behavior_list = await call_rpc(conn, {
+            behaviors: { listAllBehaviors: true },
+          });
+          break;
+        } catch (e) {
+          console.error("listAllBehaviors failed, attempt", attempt + 1, e);
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 400));
           }
         }
-      } catch (e) {
-        console.error("Failed to load behaviors", e);
+      }
+
+      if (!behavior_list || ignore) {
+        return;
+      }
+
+      let behavior_map: BehaviorMap = {};
+      const ids =
+        behavior_list.behaviors?.listAllBehaviors?.behaviors || [];
+
+      for (let behaviorId of ids) {
+        if (ignore) {
+          return;
+        }
+        try {
+          let behavior_details = await call_rpc(conn, {
+            behaviors: { getBehaviorDetails: { behaviorId } },
+          });
+          let dets: GetBehaviorDetailsResponse | undefined =
+            behavior_details?.behaviors?.getBehaviorDetails;
+          if (dets) {
+            behavior_map[dets.id] = dets;
+          }
+        } catch (e) {
+          // 单个行为详情失败不影响其它行为，也不要把整个 map 丢弃
+          console.error("getBehaviorDetails failed for id", behaviorId, e);
+        }
+      }
+
+      if (!ignore) {
+        console.log("Loaded behaviors:", Object.keys(behavior_map).length);
+        setBehaviors(behavior_map);
       }
     }
 
