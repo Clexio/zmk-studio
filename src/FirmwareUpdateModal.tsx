@@ -6,6 +6,7 @@ import { GenericModal } from "./GenericModal";
 import { useModalRef } from "./misc/useModalRef";
 import { useI18n, TranslationKey } from "./i18n";
 import { call_rpc } from "./rpc/logging";
+import { SetLayerBindingResponse } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { find_uf2_drive, write_uf2_to_drive } from "./tauri/uf2";
 import {
   downloadFirmwareFile,
@@ -66,6 +67,102 @@ async function waitForUf2DriveGone(timeoutMs: number): Promise<boolean> {
   return false;
 }
 
+interface BootKeyBinding {
+  layerId: number;
+  keyPosition: number;
+  original: {
+    behaviorId: number;
+    param1: number;
+    param2: number;
+  };
+}
+
+// 旧固件可能没有 rebootToBootloader RPC，但 ZMK 默认都会编译进 &bootloader 行为。
+// 这里通过 Studio RPC 把最后一层的一个按键临时绑成 Bootloader，让用户按键进入刷机模式。
+async function bindBootloaderKey(
+  conn: RpcConnection
+): Promise<BootKeyBinding | undefined> {
+  try {
+    // 1) 找到 Bootloader 行为的 local id（兼容 CRC16 或顺序 id 两种固件）
+    const listResp = await call_rpc(conn, {
+      behaviors: { listAllBehaviors: true },
+    });
+    const ids = listResp?.behaviors?.listAllBehaviors?.behaviors || [];
+    let bootloaderId: number | undefined;
+    for (const id of ids) {
+      const detailResp = await call_rpc(conn, {
+        behaviors: { getBehaviorDetails: { behaviorId: id } },
+      });
+      const dets = detailResp?.behaviors?.getBehaviorDetails;
+      if (dets && dets.displayName === "Bootloader") {
+        bootloaderId = dets.id;
+        break;
+      }
+    }
+    if (bootloaderId === undefined) {
+      return undefined;
+    }
+
+    // 2) 取 keymap，选最后一层的第 1 个按键作为临时入口
+    const keymapResp = await call_rpc(conn, { keymap: { getKeymap: true } });
+    const layers = keymapResp?.keymap?.getKeymap?.layers || [];
+    if (layers.length === 0) {
+      return undefined;
+    }
+    const lastLayer = layers[layers.length - 1];
+    const keyPosition = 0;
+    const old = lastLayer.bindings?.[keyPosition];
+    const original = old
+      ? {
+          behaviorId: old.behaviorId,
+          param1: old.param1,
+          param2: old.param2,
+        }
+      : { behaviorId: 0, param1: 0, param2: 0 };
+
+    // 3) 临时绑定（不 save，重启后自动消失）
+    const setResp = await call_rpc(conn, {
+      keymap: {
+        setLayerBinding: {
+          layerId: lastLayer.id,
+          keyPosition,
+          binding: { behaviorId: bootloaderId, param1: 0, param2: 0 },
+        },
+      },
+    });
+    if (
+      setResp?.keymap?.setLayerBinding !==
+      SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK
+    ) {
+      return undefined;
+    }
+
+    return { layerId: lastLayer.id, keyPosition, original };
+  } catch (e) {
+    console.error("bindBootloaderKey failed", e);
+    return undefined;
+  }
+}
+
+async function restoreBootloaderKey(
+  conn: RpcConnection,
+  info: BootKeyBinding
+) {
+  try {
+    await call_rpc(conn, {
+      keymap: {
+        setLayerBinding: {
+          layerId: info.layerId,
+          keyPosition: info.keyPosition,
+          binding: info.original,
+        },
+      },
+    });
+  } catch (e) {
+    console.error("restoreBootloaderKey failed", e);
+  }
+}
+
 export const FirmwareUpdateModal = ({
   open,
   onClose,
@@ -78,6 +175,7 @@ export const FirmwareUpdateModal = ({
   const [phase, setPhase] = useState<Phase>("idle");
   const [step, setStep] = useState<UpdateStep>("bootloader");
   const [bootManual, setBootManual] = useState(false);
+  const [bootKeyPosition, setBootKeyPosition] = useState<number | null>(null);
   const [latest, setLatest] = useState<FirmwareManifest | null>(null);
   const [errorKey, setErrorKey] = useState<TranslationKey>("checkFailed");
   const [errorDetail, setErrorDetail] = useState("");
@@ -118,6 +216,8 @@ export const FirmwareUpdateModal = ({
     setStep("bootloader");
     setErrorKey("updateFailed");
     setErrorDetail("");
+    setBootKeyPosition(null);
+    let bootKeyBinding: BootKeyBinding | undefined;
     try {
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
       if (!skipReboot) {
@@ -146,14 +246,26 @@ export const FirmwareUpdateModal = ({
               }
             }
           }
-          // 键盘即将复位：主动关闭串口管道，让 macOS 尽快释放 CDC 端口，
-          // 避免复位后端口一直被标记为“被占用”。
-          try {
-            await conn.request_writable.close();
-          } catch {
-            // 设备可能已重启、管道已关闭，忽略即可
+          if (rebooted) {
+            // 键盘即将复位：主动关闭串口管道，让 macOS 尽快释放 CDC 端口，
+            // 避免复位后端口一直被标记为“被占用”。
+            try {
+              await conn.request_writable.close();
+            } catch {
+              // 设备可能已重启、管道已关闭，忽略即可
+            }
+            setBootManual(false);
+          } else {
+            // 旧固件不支持 rebootToBootloader：临时绑定 Bootloader 键，
+            // 引导用户按键进入刷机模式，而不是要求拆机按复位键。
+            bootKeyBinding = await bindBootloaderKey(conn);
+            if (bootKeyBinding) {
+              setBootKeyPosition(bootKeyBinding.keyPosition);
+              setBootManual(false);
+            } else {
+              setBootManual(true);
+            }
           }
-          setBootManual(!rebooted);
         } else {
           setBootManual(true);
         }
@@ -211,6 +323,9 @@ export const FirmwareUpdateModal = ({
       setPhase("done");
       onUpdated?.(latest.version);
     } catch (e: any) {
+      if (bootKeyBinding && conn) {
+        await restoreBootloaderKey(conn, bootKeyBinding);
+      }
       setPhase("error");
       setErrorKey((e?.message as TranslationKey) || "updateFailed");
       setErrorDetail(
@@ -246,6 +361,7 @@ export const FirmwareUpdateModal = ({
       setErrorKey("checkFailed");
       setErrorDetail("");
       setBootManual(false);
+      setBootKeyPosition(null);
     }
   }, [open, checkUpdates]);
 
@@ -286,6 +402,13 @@ export const FirmwareUpdateModal = ({
                 {bootManual ? (
                   <p className="text-lg opacity-90 whitespace-pre-line">
                     {t("bootloaderManualHint")}
+                  </p>
+                ) : bootKeyPosition !== null ? (
+                  <p className="text-lg opacity-90 whitespace-pre-line">
+                    {t("bootloaderKeyHint").replace(
+                      "{pos}",
+                      String(bootKeyPosition + 1)
+                    )}
                   </p>
                 ) : (
                   <p className="text-xs opacity-70">

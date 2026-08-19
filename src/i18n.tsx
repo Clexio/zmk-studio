@@ -129,6 +129,8 @@ const en = {
   bootloaderAutoHint: "Sending reboot-to-bootloader command to the keyboard…",
   bootloaderManualHint:
     "If the firmware is too old to switch automatically:\n1. Hold the reset button and double-tap it (or press the key bound to &bootloader).\n2. Wait until a drive named NRFMicroBOOT appears.\n3. The update will continue automatically.",
+  bootloaderKeyHint:
+    "A Bootloader key has been temporarily bound to the last layer's key #{pos}. Press that key to enter bootloader mode (it will be restored automatically after the update).",
   retryDetect: "Re-check drive",
   stillMounted:
     "The bootloader drive is still mounted. The firmware write may have failed.",
@@ -270,6 +272,8 @@ const zh: typeof en = {
   bootloaderAutoHint: "正在向键盘发送重启到刷机模式指令…",
   bootloaderManualHint:
     "如果键盘固件较旧，无法自动进入刷机模式：\n1. 按住复位键快速双击（或按键盘上绑定 &bootloader 的按键）。\n2. 等待电脑出现 NRFMicroBOOT 磁盘。\n3. 出现后更新会自动继续。",
+  bootloaderKeyHint:
+    "已把 Bootloader 临时绑定到最后一层的第 {pos} 个按键，请按该按键进入刷机模式（更新完成后会自动还原）。",
   retryDetect: "重新检测磁盘",
   stillMounted: "刷机盘仍然存在，固件写入可能失败",
   firmwareUpdateDoneHint: "如键盘未自动重连，请在设备列表中选择键盘重新连接",
