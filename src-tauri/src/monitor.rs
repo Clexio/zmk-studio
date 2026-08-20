@@ -434,6 +434,12 @@ fn run_sh(script: &Path) -> Result<(), String> {
 }
 
 fn start_platform() -> Result<(), String> {
+    // 监控已在运行（端口可达且确实是我们的进程）时直接返回，
+    // 避免界面状态不同步时重复点击“打开”又拉起一套 watchdog/codex-monitor。
+    if monitor_is_running() {
+        return Ok(());
+    }
+
     // 同目录残留进程可能持有互斥锁但 9753 未监听（例如 HTTP 启动失败的历史实例）：
     // 先按停止流程清理，再重新启动，避免“永远打不开”。
     if monitor_process_running_cached() && !monitor_port_open() {
