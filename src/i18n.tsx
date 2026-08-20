@@ -154,6 +154,14 @@ const en = {
   monitorDownloading: "Downloading new files…",
   monitorReplacing: "Replacing files…",
   monitorCheckFailedUseLocal: "Update check failed; using local version",
+  bleClearButton: "Bluetooth pairing",
+  bleClearTitle: "Clear keyboard Bluetooth pairing",
+  bleClearDesc:
+    "This removes all Bluetooth pairings saved on the keyboard. All paired devices will need to pair again. Keymap, knob and firmware settings are not affected (USB connection only).",
+  bleClearConfirm: "Clear pairings",
+  bleClearProgress: "Clearing…",
+  bleClearDone: "Cleared. Please pair your devices again.",
+  bleClearFailed: "Failed to clear pairings.",
 };
 
 const zh: typeof en = {
@@ -294,6 +302,14 @@ const zh: typeof en = {
   monitorDownloading: "正在下载新文件…",
   monitorReplacing: "正在替换文件…",
   monitorCheckFailedUseLocal: "检查更新失败，使用本地版本",
+  bleClearButton: "蓝牙配对",
+  bleClearTitle: "清除键盘蓝牙配对",
+  bleClearDesc:
+    "将删除键盘上保存的全部蓝牙配对，所有已配对设备需重新配对；键位、旋钮和固件设置不受影响（仅 USB 连接）。",
+  bleClearConfirm: "清除配对",
+  bleClearProgress: "正在清除…",
+  bleClearDone: "已清除，请重新配对设备。",
+  bleClearFailed: "清除配对失败。",
 };
 
 export type TranslationKey = keyof typeof en;

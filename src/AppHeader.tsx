@@ -26,6 +26,7 @@ import type { TranslationKey } from "./i18n";
 import { useTheme } from "./misc/useTheme";
 import { monitorStatus, monitorStart, monitorStop } from "./tauri/monitor";
 import { listen } from "@tauri-apps/api/event";
+import { call_rpc } from "./rpc/logging";
 
 const MONITOR_PROGRESS_KEYS: Record<string, TranslationKey> = {
   checking: "monitorChecking",
@@ -68,6 +69,11 @@ export const AppHeader = ({
   const [monitorBusyAction, setMonitorBusyAction] = useState<"start" | "stop" | null>(null);
   const [monitorProgress, setMonitorProgress] = useState<string | null>(null);
   const [monitorError, setMonitorError] = useState("");
+  const [showBleClear, setShowBleClear] = useState(false);
+  const [bleClearing, setBleClearing] = useState(false);
+  const [bleClearError, setBleClearError] = useState("");
+  const [bleClearDone, setBleClearDone] = useState(false);
+  const bleClearRef = useModalRef(showBleClear);
   const { t } = useI18n();
   const theme = useTheme();
 
@@ -164,6 +170,29 @@ export const AppHeader = ({
     }
   };
 
+  const clearBleBonds = async () => {
+    if (!connectionState.conn || bleClearing) {
+      return;
+    }
+    setBleClearing(true);
+    setBleClearError("");
+    setBleClearDone(false);
+    try {
+      const resp = await call_rpc(connectionState.conn, {
+        core: { clearAllBonds: true },
+      });
+      if (resp.core?.clearAllBonds === true) {
+        setBleClearDone(true);
+      } else {
+        setBleClearError(t("bleClearFailed"));
+      }
+    } catch (e: any) {
+      setBleClearError(String(e?.message ?? e));
+    } finally {
+      setBleClearing(false);
+    }
+  };
+
   return (
     <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
       <div className="flex px-3 items-center gap-1">
@@ -249,6 +278,20 @@ export const AppHeader = ({
             </Button>
           </Tooltip>
         )}
+        {connectionState.conn && (
+          <Tooltip label={t("bleClearTitle")}>
+            <Button
+              className="flex items-center px-2 py-1 rounded text-sm enabled:hover:bg-base-300 disabled:opacity-50"
+              onPress={() => {
+                setBleClearDone(false);
+                setBleClearError("");
+                setShowBleClear(true);
+              }}
+            >
+              {t("bleClearButton")}
+            </Button>
+          </Tooltip>
+        )}
         {isMonitorSupported && monitorError && (
           <span
             className="text-xs text-red-500 max-w-40 truncate"
@@ -281,6 +324,45 @@ export const AppHeader = ({
             </Button>
           </div>
         </div>
+      </GenericModal>
+      <GenericModal ref={bleClearRef} className="max-w-[50vw]">
+        <h2 className="my-2 text-lg">{t("bleClearTitle")}</h2>
+        {bleClearDone ? (
+          <>
+            <p>{t("bleClearDone")}</p>
+            <div className="flex justify-end my-2 gap-3">
+              <Button
+                className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
+                onPress={() => setShowBleClear(false)}
+              >
+                {t("close")}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p>{t("bleClearDesc")}</p>
+            {bleClearError && (
+              <p className="text-xs text-red-500">{bleClearError}</p>
+            )}
+            <div className="flex justify-end my-2 gap-3">
+              <Button
+                className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
+                onPress={() => setShowBleClear(false)}
+                isDisabled={bleClearing}
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                className="rounded bg-primary text-primary-content hover:opacity-90 px-3 py-2"
+                onPress={clearBleBonds}
+                isDisabled={bleClearing}
+              >
+                {bleClearing ? t("bleClearProgress") : t("bleClearConfirm")}
+              </Button>
+            </div>
+          </>
+        )}
       </GenericModal>
       <div className="flex justify-end gap-1 px-2">
         {onUndo && (
