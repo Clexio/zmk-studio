@@ -295,15 +295,18 @@ fn monitor_is_running() -> bool {
         && monitor_process_running_cached()
 }
 
-/// 端口被占用但进程不属于本监控（例如旧目录手动安装的实例），
-/// 新实例将无法绑定 9753，需要提前给出明确提示。
-fn monitor_port_occupied_by_foreign() -> bool {
+fn monitor_port_open() -> bool {
     let addr = match "127.0.0.1:9753".parse::<std::net::SocketAddr>() {
         Ok(a) => a,
         Err(_) => return false,
     };
     TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok()
-        && !monitor_process_running_cached()
+}
+
+/// 端口被占用但进程不属于本监控（例如旧目录手动安装的实例），
+/// 新实例将无法绑定 9753，需要提前给出明确提示。
+fn monitor_port_occupied_by_foreign() -> bool {
+    monitor_port_open() && !monitor_process_running_cached()
 }
 
 fn sha256_hex(data: &[u8]) -> String {
@@ -431,6 +434,12 @@ fn run_sh(script: &Path) -> Result<(), String> {
 }
 
 fn start_platform() -> Result<(), String> {
+    // 同目录残留进程可能持有互斥锁但 9753 未监听（例如 HTTP 启动失败的历史实例）：
+    // 先按停止流程清理，再重新启动，避免“永远打不开”。
+    if monitor_process_running_cached() && !monitor_port_open() {
+        let _ = monitor_stop();
+    }
+
     if monitor_port_occupied_by_foreign() {
         return Err(
             "监控端口 9753 被其他进程占用（可能来自旧版监控目录），请先结束旧进程后重试"
