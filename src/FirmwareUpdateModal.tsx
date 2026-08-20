@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 
 import { RpcConnection } from "@zmkfirmware/zmk-studio-ts-client/index";
 
@@ -220,8 +220,8 @@ export const FirmwareUpdateModal = ({
     let bootKeyBinding: BootKeyBinding | undefined;
     try {
       // 1) 让键盘进入刷机模式（USB 连接时自动重启进引导程序）
-      if (!skipReboot) {
-        if (conn) {
+      if (conn) {
+        if (!skipReboot) {
           // call_rpc 已有 5 秒超时：串口断开会以 "No response" 结束，
           // 丢包/无响应会以 RPC timeout 结束。这里最多重试 3 次，
           // 确保指令尽量送达键盘。
@@ -267,13 +267,21 @@ export const FirmwareUpdateModal = ({
             }
           }
         } else {
-          setBootManual(true);
+          // 重试路径（点击“重新检测磁盘”）：键盘可能仍在正常运行，
+          // 重新尝试临时绑定刷机键，引导用户按键进入刷机模式。
+          bootKeyBinding = await bindBootloaderKey(conn);
+          if (bootKeyBinding) {
+            setBootKeyPosition(bootKeyBinding.keyPosition);
+            setBootManual(false);
+          } else {
+            setBootManual(true);
+          }
         }
       } else {
         setBootManual(true);
       }
 
-      // 2) 等待 NRFMicroBOOT 盘出现（最长 120 秒；也可手动双击复位键）
+      // 2) 等待 NRFMicroBOOT 盘出现（最长 120 秒）
       const drive = await waitForUf2Drive(120000);
       if (!drive) {
         setBootManual(true);

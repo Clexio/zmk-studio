@@ -118,7 +118,7 @@ const en = {
   firmwareUpdateDone: "Firmware update complete!",
   updateFailed: "Firmware update failed.",
   noDrive:
-    "Bootloader drive not detected. Make sure the keyboard is connected via USB, or double-click the reset button.",
+    "Bootloader drive not detected. Make sure the keyboard is connected via USB, then click \"Re-check drive\" to retry automatically.",
   noFile: "No firmware file found in the update manifest.",
   hashMismatch:
     "Firmware verification failed. The download may be corrupted.",
@@ -128,7 +128,7 @@ const en = {
     "The serial connection will drop after the keyboard reboots. This is normal. Keep the keyboard connected and wait...",
   bootloaderAutoHint: "Sending reboot-to-bootloader command to the keyboard…",
   bootloaderManualHint:
-    "If the firmware is too old to switch automatically:\n1. Hold the reset button and double-tap it (or press the key bound to &bootloader).\n2. Wait until a drive named NRFMicroBOOT appears.\n3. The update will continue automatically.",
+    "If the firmware is too old to enter bootloader automatically:\n1. Make sure the keyboard is connected via USB, then click \"Re-check drive\".\n2. The app will retry automatically and may temporarily bind the last layer's key #1 as a Bootloader key — follow the on-screen prompt.\n3. Once the NRFMicroBOOT drive appears, the update will continue automatically.\nIf it still cannot enter bootloader mode, please contact support.",
   bootloaderKeyHint:
     "A Bootloader key has been temporarily bound to the last layer's key #{pos}. Press that key to enter bootloader mode (it will be restored automatically after the update).",
   retryDetect: "Re-check drive",
@@ -270,7 +270,7 @@ const zh: typeof en = {
   waitingForReboot: "正在等待键盘重启…",
   firmwareUpdateDone: "固件更新完成！",
   updateFailed: "固件更新失败",
-  noDrive: "未检测到刷机盘，请确认键盘已通过 USB 连接，或双击复位键进入刷机模式",
+  noDrive: "未检测到刷机盘，请确认键盘已通过 USB 连接后点击“重新检测磁盘”，客户端会自动再次尝试进入刷机模式",
   noFile: "更新清单中没有找到固件文件",
   hashMismatch: "固件校验失败，下载的文件可能已损坏",
   restoreDefault: "恢复默认",
@@ -279,7 +279,7 @@ const zh: typeof en = {
     "键盘重启后串口断开属正常现象，请保持键盘连接，等待 U 盘弹出…",
   bootloaderAutoHint: "正在向键盘发送重启到刷机模式指令…",
   bootloaderManualHint:
-    "如果键盘固件较旧，无法自动进入刷机模式：\n1. 按住复位键快速双击（或按键盘上绑定 &bootloader 的按键）。\n2. 等待电脑出现 NRFMicroBOOT 磁盘。\n3. 出现后更新会自动继续。",
+    "如果固件过旧，暂时无法自动进入刷机模式：\n1. 请确认键盘已通过 USB 连接，然后点击“重新检测磁盘”。\n2. 客户端会再次尝试自动进入刷机模式，必要时会把最后一层第 1 个按键临时绑定为刷机键，请按屏幕提示操作。\n3. 出现 NRFMicroBOOT 磁盘后，更新会自动继续。\n若仍无法进入刷机模式，请联系客服协助。",
   bootloaderKeyHint:
     "已把 Bootloader 临时绑定到最后一层的第 {pos} 个按键，请按该按键进入刷机模式（更新完成后会自动还原）。",
   retryDetect: "重新检测磁盘",
